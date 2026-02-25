@@ -1,0 +1,553 @@
+================================================================================
+MAPAS SYSTEM - COMPLETE CODEBASE ANALYSIS
+================================================================================
+Generated: February 19, 2026
+
+
+================================================================================
+1. HIGH-LEVEL ARCHITECTURE
+================================================================================
+
+┌─────────────────────────────────────────────────────────────┐
+│                    MAPAS System (Two Main Subsystems)        │
+└─────────────────────────────────────────────────────────────┘
+
+SUBSYSTEM 1: FACE RECOGNITION & VERIFICATION
+┌──────────────────────────────────────────────────────────────┐
+│  Frontend (Next.js)  →  FastAPI Backend  →  Face Service   │
+│   Dashboard UI        Port 8000           InsightFace/OpenCV │
+│                                          In-memory Storage   │
+└──────────────────────────────────────────────────────────────┘
+
+SUBSYSTEM 2: PUBLIC ANNOUNCEMENT SYSTEM
+┌──────────────────────────────────────────────────────────────┐
+│  Frontend Panel  →  FastAPI Backend  →  MongoDB + TTS      │
+│  Operations UI    Broadcast Endpoint   pyttsx3 Audio Output │
+└──────────────────────────────────────────────────────────────┘
+
+
+================================================================================
+2. ALL LIBRARIES & PURPOSE
+================================================================================
+
+BACKEND (Python) - mapas-backend/requirements.txt
+────────────────────────────────────────────────────────────────
+
+Library                     Version      Purpose
+─────────────────────────────────────────────────────────────────
+fastapi                     0.109.0      Web framework for REST APIs
+uvicorn                     0.27.0       ASGI server to run FastAPI
+insightface                 0.7.3        Face detection & embedding extraction (ArcFace model)
+onnxruntime                 -            Model inference engine for InsightFace
+opencv-python               4.9.0.80     Image processing & Haar Cascade fallback
+numpy                       1.24.3       Numerical computing for embeddings
+scipy                       1.11.4       Cosine similarity calculations
+pymongo                     4.6.1        MongoDB driver for announcements
+pyttsx3                     2.90         Text-to-Speech for announcements
+python-dotenv               -            Environment variable management
+pydantic                    2.5.0        Data validation for requests/responses
+python-multipart            -            File upload handling
+
+
+FRONTEND (TypeScript/React) - mapas-dashboard/
+────────────────────────────────────────────────────────────────
+
+Library              Purpose
+─────────────────────────────────────────────────────────────────
+Next.js              React framework for dashboard UI
+React                UI component library
+radix-ui             Accessible UI component library
+Tailwind CSS         CSS styling
+lucide-react         Icon library
+
+
+================================================================================
+3. DATA FLOW (INPUT → OUTPUT)
+================================================================================
+
+A. FACE VERIFICATION FLOW
+────────────────────────────────────────────────────────────────
+
+INPUT: Image File (JPEG/PNG)
+  ↓
+[Frontend] Capture/Upload Face
+  ↓
+[POST /verify] Send to Backend
+  ↓
+[main.py] Receive UploadFile
+  ↓
+[utils.decode_image_bytes()] Convert bytes → OpenCV image
+  ↓
+[FaceService._detect_faces_insightface()] Extract face embedding (512-dim vector)
+  ↓
+[FaceService._verify_face()] 
+   - Compare with stored embeddings using cosine similarity
+   - customer_embeddings = {customer_1: array, customer_2: array, ...}
+  ↓
+[Similarity Score] If score > FACE_VERIFICATION_THRESHOLD (0.45)
+  ↓
+OUTPUT: JSON Response
+{
+  "status": "AUTHORIZED" or "UNAUTHORIZED",
+  "customer_id": "customer_1",
+  "confidence": 0.92,
+  "message": "Face verified"
+}
+
+
+B. FACE REGISTRATION FLOW
+────────────────────────────────────────────────────────────────
+
+INPUT: Customer ID + Image File
+  ↓
+[POST /customers/{customer_id}/register-face]
+  ↓
+[utils.decode_image_bytes()] Convert image
+  ↓
+[FaceService.extract_embedding()] Get 512-dim embedding
+  ↓
+[FaceService.add_customer_face()]
+   - Store in memory: customer_embeddings[customer_id] = embedding
+  ↓
+OUTPUT: FaceEmbeddingResponse
+{
+  "status": "SUCCESS",
+  "message": "Face registered",
+  "customer_id": "customer_1",
+  "embedding_dim": 512
+}
+
+
+C. ANNOUNCEMENT BROADCASTING FLOW
+────────────────────────────────────────────────────────────────
+
+INPUT: Text Message + Type (Emergency/General)
+  ↓
+[Frontend] PublicAnnouncementPanel.tsx
+  ↓
+[POST /announcements/broadcast] Send request
+  ↓
+[main.py] Receive AnnouncementData
+  ↓
+[AnnouncementRepository.create_announcement()] 
+   - Store in MongoDB
+  ↓
+[TTS Service] Convert text to speech (pyttsx3)
+  ↓
+[System Speakers] Play audio
+  ↓
+OUTPUT: AnnouncementResponse
+{
+  "id": "507f...",
+  "status": "broadcasted",
+  "message": "Your message",
+  "created_at": "2026-02-13T10:30:00Z"
+}
+
+Stored in MongoDB:
+mapas_db
+  └── announcements (collection)
+      └── {document with message, type, timestamp, etc.}
+
+
+================================================================================
+4. COMPLETED FEATURES ✅
+================================================================================
+
+FACE RECOGNITION SUBSYSTEM
+─────────────────────────────────────────────────────────────────
+✓ Face detection using InsightFace (buffalo_l model)
+✓ Face embedding extraction (512-dimensional)
+✓ Face verification with cosine similarity matching
+✓ OpenCV Haar Cascade fallback if InsightFace fails
+✓ Customer face registration & enrollment
+✓ In-memory embedding storage
+✓ Configurable verification threshold (0.45 default)
+✓ REST API endpoints (13 total)
+✓ CORS support for frontend integration
+✓ Error handling & validation
+
+
+PUBLIC ANNOUNCEMENT SYSTEM
+─────────────────────────────────────────────────────────────────
+✓ MongoDB integration for persistence
+✓ Text-to-Speech (pyttsx3) for audio output
+✓ Broadcast announcements (custom + predefined)
+✓ Filter announcements by type (Emergency/General)
+✓ Delete announcements
+✓ Frontend UI (PublicAnnouncementPanel component)
+✓ Operations dashboard page
+✓ Announcement history with pagination
+
+
+INFRASTRUCTURE
+─────────────────────────────────────────────────────────────────
+✓ FastAPI web framework
+✓ Docker containerization (multi-stage build)
+✓ Docker Compose support
+✓ Environment configuration (.env)
+✓ Setup scripts (Windows/Linux)
+✓ Comprehensive documentation (6 docs files)
+
+
+================================================================================
+5. INCOMPLETE FEATURES / GAPS ⚠️
+================================================================================
+
+CRITICAL GAPS
+────────────────────────────────────────────────────────────────
+
+Gap                              Impact                  Priority
+─────────────────────────────────────────────────────────────────
+No API Authentication            Anyone can call         HIGH
+                                 endpoints, no access 
+                                 control
+
+No Rate Limiting                 Vulnerable to brute      HIGH
+                                 force & DoS attacks
+
+In-Memory Only Storage           Face embeddings lost    HIGH
+                                 on restart, not scalable
+
+No Database Persistence          Face data not stored    HIGH
+                                 permanently
+
+Single Process                   Can't handle high       MEDIUM
+                                 concurrency (1 model 
+                                 instance)
+
+No Caching/Redis                 Same embedding          MEDIUM
+                                 computed repeatedly
+
+No Monitoring/Logging            Can't track errors in   MEDIUM
+                                 production
+
+No API Versioning                Breaking changes will   MEDIUM
+                                 affect clients
+
+No Webhook Support               Can't notify external   LOW
+                                 systems of events
+
+
+FEATURE GAPS
+────────────────────────────────────────────────────────────────
+✗ Face anti-spoofing (prevents photo/video attacks)
+✗ Liveness detection (confirms real face, not image)
+✗ Multi-face verification (multiple people in one image)
+✗ Face quality assessment (blurry/tilted detection)
+✗ Batch operations (process multiple faces at once)
+✗ Model fine-tuning (custom model training)
+✗ Deployment on edge devices (Raspberry Pi, Jetson Nano)
+✗ Multi-language TTS support
+✗ WebSocket real-time announcements
+✗ Role-based access control (RBAC)
+
+
+================================================================================
+6. BUGS & WEAK AREAS 🐛
+================================================================================
+
+SECURITY ISSUES
+────────────────────────────────────────────────────────────────
+
+BUG 1: No input validation on file uploads
+────────────────────────────────────────────
+@app.post("/verify")
+async def verify_customer_face(file: UploadFile = File(...)):
+    # ❌ WEAKNESS: No file size limit, no MIME type check
+    # ❌ Could accept huge files, crash server
+    # ✓ FIX: Add max file size, validate MIME type
+    
+    # ❌ WEAKNESS: decode_image_bytes() catches all exceptions silently
+    # ✓ FIX: Log errors, return 400 for invalid images
+
+
+PERFORMANCE ISSUES
+────────────────────────────────────────────────────────────────
+
+BUG 2: Model loads on every class instantiation (though singleton prevents this)
+────────────────────
+# ❌ WEAKNESS: First request takes 1-2 seconds (model warm-up)
+# ✓ FIX: Pre-warm model on startup
+
+BUG 3: No connection pooling for MongoDB
+────────────────────
+# ❌ WEAKNESS: Creates new connection per request
+# ✓ FIX: Use MongoDB connection pool
+
+BUG 4: In-memory embedding storage is not thread-safe
+────────────────────
+# ❌ WEAKNESS: Race conditions if multiple requests modify dict simultaneously
+# ✓ FIX: Use thread lock (threading.Lock) or replace with database
+
+
+DATA ISSUES
+────────────────────────────────────────────────────────────────
+
+BUG 5: No data validation for embeddings
+────────────────────
+# ❌ WEAKNESS: What if embedding extraction fails silently?
+# ✓ FIX: Add validation that embedding has correct dimensions (512)
+
+BUG 6: Face detection threshold not configurable per endpoint
+────────────────────
+# ❌ WEAKNESS: Can't adjust sensitivity for different use cases
+# ✓ FIX: Add threshold parameter to API calls
+
+BUG 7: No deduplication of customer registrations
+────────────────────
+# ❌ WEAKNESS: Same person registered twice with different customer_id
+# ✓ FIX: Add face comparison before registration
+
+
+INFRASTRUCTURE ISSUES
+────────────────────────────────────────────────────────────────
+
+BUG 8: Only CPU execution provider (no GPU support)
+────────────────────
+# ❌ WEAKNESS: Slow inference on high load
+# ✓ FIX: Add GPU support (CUDA, TensorRT)
+
+BUG 9: No horizontal scaling
+────────────────────
+# ❌ WEAKNESS: Can't add more backend servers
+# ✓ FIX: Externalize face model, use Redis for embeddings
+
+BUG 10: Announcements not persisted on MongoDB start
+────────────────────
+# ❌ ISSUE: If MongoDB crashes, announcement history lost
+# ✓ FIX: Add MongoDB replication, backup strategy
+
+
+CODE QUALITY ISSUES
+────────────────────────────────────────────────────────────────
+✗ No unit tests
+✗ No API request logging
+✗ Inconsistent error messages
+✗ No type hints in some functions
+✗ Mock customer data hardcoded (not production-ready)
+✗ No endpoint documentation strings
+
+
+================================================================================
+7. SUGGESTED ROADMAP (WHAT TO BUILD NEXT)
+================================================================================
+
+PHASE 1: SECURITY (Weeks 1-2) - CRITICAL
+────────────────────────────────────────────────────────────────
+Priority: 🔴 CRITICAL - Block before production
+
+1. API Authentication
+   - Implement JWT token-based auth
+   - Add user roles (admin, operator, viewer)
+   - Secure API keys for external access
+
+2. Rate Limiting & DDoS Protection
+   - Add per-IP rate limits (100 req/min)
+   - Add per-user rate limits
+   - Implement exponential backoff
+
+3. Input Validation
+   - File size limit (max 50MB)
+   - MIME type validation
+   - Image dimension checks
+   - SQL/command injection prevention
+
+4. HTTPS/TLS
+   - Enable SSL certificates
+   - Redirect HTTP → HTTPS
+   - Add HSTS headers
+
+
+PHASE 2: DATA PERSISTENCE (Weeks 3-4) - CRITICAL
+────────────────────────────────────────────────────────────────
+Priority: 🔴 CRITICAL - Without this, data is lost on restart
+
+1. PostgreSQL Integration
+   - Store face embeddings in DB (not memory)
+   - Store customer profiles
+   - Add schema migrations
+   - Add data indexing for fast lookup
+
+2. Transaction Support
+   - Atomic registration (all or nothing)
+   - Rollback on errors
+
+3. Database Backups
+   - Daily backups to cloud (AWS S3, GCS)
+   - Point-in-time recovery
+   - Backup verification tests
+
+
+PHASE 3: MONITORING & RELIABILITY (Weeks 5-6) - HIGH
+────────────────────────────────────────────────────────────────
+Priority: 🟠 HIGH - Needed for production observability
+
+1. Logging System
+   - Structured logging (JSON format)
+   - Log levels (DEBUG, INFO, WARNING, ERROR)
+   - Log rotation & retention
+   - Centralized logging (ELK, Loki)
+
+2. Monitoring & Alerting
+   - Request latency metrics
+   - Error rate tracking
+   - Model inference time
+   - Database connection pool status
+   - CPU/Memory usage
+   - Prometheus + Grafana dashboards
+   - Alert on threshold breaches
+
+3. Health Checks
+   - Database connectivity check
+   - Model availability check
+   - MongoDB connection check
+   - API /health endpoint
+   - Kubernetes liveness/readiness probes
+
+4. Error Tracking
+   - Sentry integration
+   - Error rate alerting
+   - Distributed tracing (Jaeger)
+
+
+PHASE 4: PERFORMANCE OPTIMIZATION (Weeks 7-8) - MEDIUM
+────────────────────────────────────────────────────────────────
+Priority: 🟡 MEDIUM - For handling production load
+
+1. Caching Layer
+   - Redis for face embedding cache
+   - Cache recent verification results
+   - Cache announcement list
+   - TTL: 1 hour for embeddings
+
+2. Model Optimization
+   - Quantization (convert to int8)
+   - Knowledge distillation (smaller model)
+   - GPU support (CUDA/TensorRT)
+   - Batch processing for multiple embeddings
+
+3. Database Optimization
+   - Add indexes on customer_id, timestamp
+   - Query optimization
+   - Connection pooling
+   - Prepared statements
+
+4. Horizontal Scaling
+   - Kafka for job queue
+   - Load balancer (Nginx)
+   - Multiple backend instances
+   - Shared embedding store (Redis/DB)
+
+
+PHASE 5: ADVANCED FEATURES (Weeks 9-12) - LOW
+────────────────────────────────────────────────────────────────
+Priority: 🟢 LOW - Nice-to-have features
+
+1. Face Anti-Spoofing
+   - Detect photo/video attacks
+   - Liveness detection (blink, head movement)
+   - PPG (Photoplethysmography) analysis
+
+2. Multi-Face Support
+   - Detect multiple faces in image
+   - Match strongest face
+   - Group faces by similarity
+
+3. Announcement Enhancements
+   - Schedule announcements (cron jobs)
+   - Broadcast to specific areas (geofencing)
+   - Multi-language TTS
+   - WebSocket real-time updates
+   - Mobile push notifications
+
+4. Analytics Dashboard
+   - Face verification success rate
+   - Average verification time
+   - Most verified customers
+   - Announcement engagement metrics
+   - Trend analysis
+
+5. Drone Integration
+   - Raspberry Pi deployment
+   - Camera feed integration
+   - Real-time announcement trigger
+   - GPS tracking
+
+
+PHASE 6: OPERATIONS & DEPLOYMENT (Ongoing)
+────────────────────────────────────────────────────────────────
+Priority: 🟡 MEDIUM - Needed for smooth operations
+
+1. CI/CD Pipeline
+   - GitHub Actions for automatic testing
+   - Docker image building
+   - Automated deployment
+   - Rollback capability
+
+2. Testing
+   - Unit tests (90% coverage)
+   - Integration tests
+   - Load testing (k6, locust)
+   - Security testing (OWASP)
+
+3. Documentation
+   - API OpenAPI/Swagger docs
+   - Architecture decision records (ADR)
+   - Deployment runbooks
+   - Troubleshooting guides
+
+4. Kubernetes Deployment
+   - Helm charts
+   - Pod autoscaling
+   - Service mesh (Istio) for observability
+   - ConfigMaps for configuration
+
+
+================================================================================
+8. QUICK START COMMANDS
+================================================================================
+
+# Backend Setup
+cd mapas-backend
+python -m venv venv
+.\venv\Scripts\activate  # Windows
+pip install -r requirements.txt
+python main.py          # Starts on http://localhost:8000
+
+# Frontend Setup
+cd mapas-dashboard
+npm install
+npm run dev             # Starts on http://localhost:3000
+
+# MongoDB Setup (required for announcements)
+# Download MongoDB Community Edition
+# Run MongoDB service (locally or MongoDB Atlas cloud)
+
+# Test API
+curl http://localhost:8000/docs  # Interactive API docs
+
+
+================================================================================
+9. SUMMARY TABLE
+================================================================================
+
+Aspect                  Status           Details
+─────────────────────────────────────────────────────────────────
+Core System             ✅ Complete      Face verification + Announcements
+API Design              ✅ Good          RESTful, well-structured
+Frontend UI             ✅ Good          Modern Next.js dashboard
+Security                ❌ Poor          No auth, no rate limit, no HTTPS
+Data Persistence        ⚠️  Partial      MongoDB for announcements, memory for faces
+Scalability             ❌ Poor          Single process, in-memory storage
+Monitoring              ❌ Missing       No logging, no metrics, no alerts
+Testing                 ❌ Missing       No unit tests, no integration tests
+Documentation           ✅ Excellent     6 comprehensive docs files
+Production Ready        ⚠️  Not Yet      Needs security + persistence fixes
+
+
+================================================================================
+STATUS: MVP COMPLETE, PRODUCTION HARDENING NEEDED 🚀
+================================================================================
+
+End of Analysis Document
