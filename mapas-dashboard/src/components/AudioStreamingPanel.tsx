@@ -288,18 +288,6 @@ export function AudioStreamingPanel() {
                             </div>
                         )}
 
-                        {/* Status Messages */}
-                        <div className="bg-slate-950 border border-blue-900/50 rounded-md p-4 space-y-2">
-                            <p className="text-sm font-semibold text-blue-300">ℹ️ How it works:</p>
-                            <ul className="text-sm text-slate-300 space-y-1 ml-4 list-disc">
-                                <li>Click "Connect to Broadcast" to establish connection</li>
-                                <li>Click "Start Streaming" to capture microphone input</li>
-                                <li>Audio is sent to all connected clients in real-time</li>
-                                <li>Use volume slider to adjust playback level</li>
-                                <li>Supports integration with custom mic/speaker devices</li>
-                            </ul>
-                        </div>
-
                         {/* Recording Status */}
                         {isRecording && (
                             <div className="bg-green-950 border border-green-800 rounded-md p-4">

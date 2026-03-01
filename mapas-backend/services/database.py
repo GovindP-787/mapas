@@ -139,6 +139,9 @@ class CustomerFaceRepository:
             doc['id'] = str(doc['_id'])
             if '_id' in doc:
                 del doc['_id']
+            # Convert datetime to ISO string so JSON serialization never fails
+            if 'enrollment_date' in doc and hasattr(doc['enrollment_date'], 'isoformat'):
+                doc['enrollment_date'] = doc['enrollment_date'].isoformat()
         return customers
     
     def get_customer_by_id(self, customer_id: str) -> Optional[dict]:

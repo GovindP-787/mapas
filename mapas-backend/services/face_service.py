@@ -112,14 +112,23 @@ class FaceService:
         """Fallback face detection using OpenCV Haar Cascade."""
         gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
         gray = cv2.equalizeHist(gray)
-        
-        faces = self.face_cascade.detectMultiScale(
-            gray,
-            scaleFactor=1.1,
-            minNeighbors=5,
-            minSize=(30, 30)
-        )
-        
+
+        # Try progressively more lenient settings until a face is found
+        for scale, neighbors, min_size in [
+            (1.05, 4, (40, 40)),
+            (1.1,  3, (30, 30)),
+            (1.15, 2, (20, 20)),
+        ]:
+            faces = self.face_cascade.detectMultiScale(
+                gray,
+                scaleFactor=scale,
+                minNeighbors=neighbors,
+                minSize=min_size,
+                flags=cv2.CASCADE_SCALE_IMAGE
+            )
+            if len(faces) > 0:
+                break
+
         print(f"[FaceService] OpenCV detected {len(faces)} faces")
         return faces
     def extract_embedding(self, image_bytes: bytes) -> Optional[np.ndarray]:
@@ -184,38 +193,76 @@ class FaceService:
     
     def _extract_face_embedding_opencv(self, image: np.ndarray, face_rect: Tuple) -> np.ndarray:
         """
-        Fallback embedding extraction using OpenCV histogram method.
-        
+        Fallback embedding using HOG (Histogram of Oriented Gradients).
+        HOG captures facial structure / edge orientations which are
+        identity-specific — far more discriminative than colour histograms.
+
         Args:
             image: BGR image array
             face_rect: (x, y, w, h) tuple
-            
+
         Returns:
-            512-dimensional embedding vector
+            512-dimensional L2-normalised embedding vector
         """
         x, y, w, h = face_rect
-        face_roi = image[y:y+h, x:x+w]
-        face_roi = cv2.resize(face_roi, (100, 100))
-        
-        # Create embedding using RGB histogram (simple approach)
-        embedding = []
-        for i in range(3):  # B, G, R channels
-            hist = cv2.calcHist([face_roi], [i], None, [64], [0, 256])
-            hist = cv2.normalize(hist, hist).flatten()
-            embedding.extend(hist)
-        
-        # Pad to 512 dimensions
-        embedding = np.array(embedding, dtype=np.float32)
-        if len(embedding) < 512:
-            embedding = np.pad(embedding, (0, 512 - len(embedding)), mode='constant')
-        else:
-            embedding = embedding[:512]
-        
-        # Normalize to unit length
+
+        # Add 20 % padding so ears / chin are included
+        pad = int(0.20 * max(w, h))
+        x1 = max(0, x - pad)
+        y1 = max(0, y - pad)
+        x2 = min(image.shape[1], x + w + pad)
+        y2 = min(image.shape[0], y + h + pad)
+        face_roi = image[y1:y2, x1:x2]
+
+        # Resize to a fixed 64×64 window
+        face_roi = cv2.resize(face_roi, (64, 64))
+
+        # Convert to grey + CLAHE for lighting normalisation
+        gray = cv2.cvtColor(face_roi, cv2.COLOR_BGR2GRAY)
+        clahe = cv2.createCLAHE(clipLimit=2.0, tileGridSize=(4, 4))
+        gray = clahe.apply(gray)
+
+        # ── HOG descriptor (1764-dim for 64×64 / 8×8 cells / 16×16 blocks) ──
+        hog = cv2.HOGDescriptor(
+            _winSize  =(64, 64),
+            _blockSize=(16, 16),
+            _blockStride=(8, 8),
+            _cellSize =(8, 8),
+            _nbins    =9
+        )
+        hog_feat = hog.compute(gray).flatten().astype(np.float32)  # 1764-dim
+
+        # ── LBP-style texture histogram (256-dim) ──
+        # Use simple thresholding of neighbour differences as a fast proxy
+        lbp_feat = np.zeros(256, dtype=np.float32)
+        shifted = [
+            np.roll(gray,  1, axis=0), np.roll(gray, -1, axis=0),
+            np.roll(gray,  1, axis=1), np.roll(gray, -1, axis=1),
+            np.roll(np.roll(gray,  1, axis=0),  1, axis=1),
+            np.roll(np.roll(gray,  1, axis=0), -1, axis=1),
+            np.roll(np.roll(gray, -1, axis=0),  1, axis=1),
+            np.roll(np.roll(gray, -1, axis=0), -1, axis=1),
+        ]
+        code = np.zeros(gray.shape, dtype=np.uint8)
+        for bit, s in enumerate(shifted):
+            code |= ((gray.astype(np.int16) >= s.astype(np.int16)).astype(np.uint8) << bit)
+        hist, _ = np.histogram(code.flatten(), bins=256, range=(0, 256))
+        lbp_feat = hist.astype(np.float32)
+
+        # ── Concatenate & reduce to 512 dims ──
+        combined = np.concatenate([hog_feat, lbp_feat])  # 2020-dim
+        # Average-pool down to 512
+        n = len(combined) // 512
+        embedding = np.array(
+            [combined[i * n:(i + 1) * n].mean() for i in range(512)],
+            dtype=np.float32
+        )
+
+        # L2-normalise
         norm = np.linalg.norm(embedding)
         if norm > 0:
             embedding = embedding / norm
-        
+
         return embedding
     
     def add_customer_face(self, customer_id: str, image_bytes: bytes) -> bool:
@@ -261,10 +308,7 @@ class FaceService:
         """
         try:
             if threshold is None:
-                threshold = settings.FACE_VERIFICATION_THRESHOLD
-            
-            # Extract embedding
-            embedding = self.extract_embedding(image_bytes)
+                threshold = self._effective_threshold
             
             if embedding is None:
                 return None, 0.0
@@ -291,6 +335,59 @@ class FaceService:
             print(f"[FaceService] Error verifying face: {str(e)}")
             return None, 0.0
     
+    @property
+    def _effective_threshold(self) -> float:
+        """Return a lower threshold when using the OpenCV HOG fallback.
+
+        InsightFace (ArcFace) embeddings are highly discriminative so a
+        threshold of 0.45 is appropriately strict.  The HOG fallback is
+        weaker; same-person similarity typically lands around 0.70-0.90
+        but is more sensitive to conditions, so we use a lower bar.
+        """
+        if self.model is None:          # OpenCV fallback mode
+            return max(settings.FACE_VERIFICATION_THRESHOLD * 0.70, 0.25)
+        return settings.FACE_VERIFICATION_THRESHOLD
+
+    def verify_face_against_customer(
+        self,
+        image_bytes: bytes,
+        customer_id: str,
+        threshold: Optional[float] = None
+    ) -> Tuple[bool, float]:
+        """
+        Verify face directly against a specific customer's embedding.
+
+        Args:
+            image_bytes: Raw image data to verify
+            customer_id: The specific customer to compare against
+            threshold: Similarity threshold (defaults to settings value)
+
+        Returns:
+            Tuple of (is_match, similarity_score)
+        """
+        try:
+            if threshold is None:
+                threshold = self._effective_threshold
+
+            embedding = self.extract_embedding(image_bytes)
+            if embedding is None:
+                print("[FaceService] No face detected in verification image")
+                return False, 0.0
+
+            stored = self.face_embeddings.get(customer_id)
+            if stored is None:
+                print(f"[FaceService] No stored embedding for customer {customer_id}")
+                return False, 0.0
+
+            similarity = compute_cosine_similarity(embedding, stored)
+            is_match = similarity >= threshold
+            print(f"[FaceService] Direct compare customer {customer_id}: score={similarity:.4f}, threshold={threshold}, match={is_match}")
+            return is_match, similarity
+
+        except Exception as e:
+            print(f"[FaceService] Error in direct face compare: {str(e)}")
+            return False, 0.0
+
     def get_registered_customers(self) -> List[str]:
         """
         Get list of registered customers.

@@ -185,12 +185,16 @@ export function CustomerFaceEnrollment() {
 
             if (response.ok) {
                 const result = await response.json()
-                toast.success("Face uploaded and enrolled successfully")
-                setSelectedFiles(prev => { const next = { ...prev }; delete next[customerId]; return next })
-                await loadCustomers() // Refresh customer list to show updated status
+                if (result.status === "SUCCESS") {
+                    toast.success("Face uploaded and enrolled successfully")
+                    setSelectedFiles(prev => { const next = { ...prev }; delete next[customerId]; return next })
+                    await loadCustomers() // Refresh customer list to show updated status
+                } else {
+                    toast.error(result.message || "Face upload failed. No face detected in image.")
+                }
             } else {
                 const error = await response.json()
-                throw new Error(error.detail || "Face upload failed")
+                throw new Error(error.message || error.detail || "Face upload failed")
             }
         } catch (error) {
             toast.error(error instanceof Error ? error.message : "Face upload failed")

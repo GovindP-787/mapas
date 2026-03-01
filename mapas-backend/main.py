@@ -142,9 +142,9 @@ async def load_customer_embeddings():
                     import base64
                     import numpy as np
                     
-                    # Decode base64 embedding back to numpy array
+                    # Decode base64 embedding back to numpy array (.copy() avoids read-only frombuffer)
                     embedding_bytes = base64.b64decode(customer['face_embedding'])
-                    embedding = np.frombuffer(embedding_bytes, dtype=np.float32)
+                    embedding = np.frombuffer(embedding_bytes, dtype=np.float32).copy()
                     
                     # Store in face service
                     face_service.face_embeddings[customer['id']] = embedding
@@ -524,11 +524,10 @@ async def upload_customer_face(customer_id: str, face_image: UploadFile = File(.
         embedding = face_service.extract_embedding(image_bytes)
         if embedding is None:
             log.warning(f"⚠️  No face detected in uploaded image for customer: {customer['name']}")
-            return {
-                "status": "FAILED",
-                "message": "No face detected in uploaded image. Please upload a clear face photo.",
-                "customer_id": customer_id
-            }
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                detail="No face detected in uploaded image. Please upload a clear face photo."
+            )
         
         # Convert embedding to base64 for storage
         import base64
@@ -539,11 +538,10 @@ async def upload_customer_face(customer_id: str, face_image: UploadFile = File(.
         success = customer_face_repo.update_face_embedding(customer_id, embedding_b64)
         if not success:
             log.error(f"❌ Failed to store face embedding for customer: {customer['name']}")
-            return {
-                "status": "FAILED", 
-                "message": "Failed to store face embedding",
-                "customer_id": customer_id
-            }
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail="Failed to store face embedding in database."
+            )
         
         # Also store in face service for immediate use
         face_service.face_embeddings[customer_id] = embedding
@@ -647,29 +645,37 @@ async def verify_specific_customer(customer_id: str, face_image: UploadFile = Fi
                 detail="Customer not found"
             )
         
-        # Load customer embedding if not in memory
+        # Load customer embedding into memory if not already present
         if customer_id not in face_service.face_embeddings and customer.get('face_embedding'):
             import base64
             import numpy as np
             embedding_bytes = base64.b64decode(customer['face_embedding'])
-            embedding = np.frombuffer(embedding_bytes, dtype=np.float32)
+            embedding = np.frombuffer(embedding_bytes, dtype=np.float32).copy()
             face_service.face_embeddings[customer_id] = embedding
-        
-        # Read and verify face image
+            log.info(f"📥 Loaded embedding for {customer['name']} into memory (dim={embedding.shape})")
+
+        if customer_id not in face_service.face_embeddings:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Customer has no face enrolled. Please upload a face image first."
+            )
+
+        # Read and verify face image directly against this customer
         image_bytes = await face_image.read()
-        verified_customer_id, similarity = face_service.verify_face(image_bytes)
-        
-        # Check if verified customer matches the selected customer
-        is_match = verified_customer_id == customer_id
-        
-        log.info(f"🔍 Face verification for {customer['name']}: {'✅ MATCH' if is_match else '❌ NO MATCH'} ({similarity:.3f})")
-        
+        log.info(f"🔍 Direct face verification for {customer['name']} (ID: {customer_id})")
+        log.info(f"   Registered customers in memory: {face_service.get_registered_customers()}")
+
+        is_match, similarity = face_service.verify_face_against_customer(image_bytes, customer_id)
+
+        log.info(f"🔍 Face verification for {customer['name']}: {'✅ MATCH' if is_match else '❌ NO MATCH'} (score={similarity:.4f}, threshold={settings.FACE_VERIFICATION_THRESHOLD})")
+
         return VerificationResponse(
             status="VERIFIED" if is_match else "NOT_VERIFIED",
             customer_id=customer_id if is_match else None,
             customer_name=customer['name'] if is_match else None,
-            similarity_score=similarity if is_match else 0.0,
-            message=f"Verification {'successful' if is_match else 'failed'} for {customer['name']}"
+            similarity_score=similarity,
+            confidence=similarity,
+            message=f"Verification {'successful' if is_match else 'failed'} for {customer['name']} (score: {similarity:.3f})"
         )
     except HTTPException:
         raise
@@ -1301,30 +1307,6 @@ async def get_all_operation_logs(limit: int = 100):
             }
         ]
         return mock_logs[:limit]
-
-
-# ============================================================================
-# ERROR HANDLING
-# ============================================================================
-
-@app.exception_handler(HTTPException)
-async def http_exception_handler(request, exc):
-    """Handle HTTP exceptions with standard error response."""
-    return {
-        "status": "ERROR",
-        "message": exc.detail,
-        "error_code": exc.status_code
-    }
-
-
-@app.exception_handler(Exception)
-async def general_exception_handler(request, exc):
-    """Handle unexpected exceptions."""
-    return {
-        "status": "ERROR",
-        "message": "Internal server error",
-        "error_code": 500
-    }
 
 
 # ============================================================================

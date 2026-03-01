@@ -55,9 +55,8 @@ class VerificationResponse(BaseModel):
     customer_id: Optional[str] = None
     customer_name: Optional[str] = None
     similarity_score: Optional[float] = None
-    message: Optional[str] = None
     confidence: float = 0.0
-    message: str
+    message: str = ""
 
 
 class CustomerRegistration(BaseModel):

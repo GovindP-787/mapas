@@ -33,6 +33,10 @@ interface AudioDevice {
 }
 
 export function useAudioStream(options: UseAudioStreamOptions = {}) {
+    // ── Stable options ref (prevents stale-closure churn on every render) ─────
+    const optionsRef = useRef(options);
+    optionsRef.current = options; // updated synchronously — no useEffect needed
+
     // ── Refs ──────────────────────────────────────────────────────────────────
     const wsRef           = useRef<WebSocket | null>(null);
     const audioCtxRef     = useRef<AudioContext | null>(null);
@@ -73,7 +77,7 @@ export function useAudioStream(options: UseAudioStreamOptions = {}) {
             if (data.status === 'pyaudio_not_available') {
                 const msg = 'PyAudio not installed on server. Install with: pip install pyaudio';
                 setError(msg);
-                options.onError?.(msg);
+                optionsRef.current.onError?.(msg);
                 setDevices({ input: [], output: [] });
                 return data;
             }
@@ -86,10 +90,10 @@ export function useAudioStream(options: UseAudioStreamOptions = {}) {
         } catch (e) {
             const msg = e instanceof Error ? e.message : 'Failed to fetch devices';
             setError(msg);
-            options.onError?.(msg);
+            optionsRef.current.onError?.(msg);
             throw e;
         }
-    }, [options]);
+    }, []);
 
     // ── Receive: play a raw Int16 PCM chunk ───────────────────────────────────
     const playPCMChunk = useCallback(async (rawBuffer: ArrayBuffer) => {
@@ -150,7 +154,7 @@ export function useAudioStream(options: UseAudioStreamOptions = {}) {
                 if (ws.readyState !== WebSocket.OPEN) {
                     const msg = 'WebSocket connection timeout (5 s)';
                     setError(msg);
-                    options.onError?.(msg);
+                    optionsRef.current.onError?.(msg);
                     ws.close();
                 }
             }, 5000);
@@ -159,7 +163,7 @@ export function useAudioStream(options: UseAudioStreamOptions = {}) {
                 clearTimeout(connectionTimeout);
                 setIsConnected(true);
                 setError(null);
-                options.onStatusChange?.('connected');
+                optionsRef.current.onStatusChange?.('connected');
                 console.log('✅ Connected to PCM broadcast stream');
             };
 
@@ -173,11 +177,11 @@ export function useAudioStream(options: UseAudioStreamOptions = {}) {
                         const msg = JSON.parse(event.data as string);
                         if (msg.type === 'status') {
                             console.log('📊 Status:', msg.message);
-                            options.onStatusChange?.(msg.status || '');
+                            optionsRef.current.onStatusChange?.(msg.status || '');
                         } else if (msg.type === 'error') {
                             const errMsg = msg.message || 'Audio stream error';
                             setError(errMsg);
-                            options.onError?.(errMsg);
+                            optionsRef.current.onError?.(errMsg);
                         }
                     } catch (e) {
                         console.error('Error parsing WS message:', e);
@@ -189,14 +193,14 @@ export function useAudioStream(options: UseAudioStreamOptions = {}) {
                 clearTimeout(connectionTimeout);
                 const msg = 'WebSocket connection failed. Backend may have crashed or port is blocked.';
                 setError(msg);
-                options.onError?.(msg);
+                optionsRef.current.onError?.(msg);
             };
 
             ws.onclose = (event) => {
                 clearTimeout(connectionTimeout);
                 setIsConnected(false);
                 setIsRecording(false);
-                options.onStatusChange?.('disconnected');
+                optionsRef.current.onStatusChange?.('disconnected');
                 console.log(`🔌 WS closed: code=${event.code} reason=${event.reason || 'none'}`);
             };
 
@@ -205,10 +209,10 @@ export function useAudioStream(options: UseAudioStreamOptions = {}) {
         } catch (e) {
             const msg = e instanceof Error ? e.message : 'Failed to connect';
             setError(msg);
-            options.onError?.(msg);
+            optionsRef.current.onError?.(msg);
             throw e;
         }
-    }, [options, playPCMChunk]);
+    }, [playPCMChunk]);
 
     // ── Start microphone → AudioWorklet → WebSocket ───────────────────────────
     const startMicStream = useCallback(async () => {
@@ -255,15 +259,15 @@ export function useAudioStream(options: UseAudioStreamOptions = {}) {
             worklet.connect(silentGainRef.current);
 
             setIsRecording(true);
-            options.onStatusChange?.('recording');
+            optionsRef.current.onStatusChange?.('recording');
             console.log('🎤 PCM mic stream started (16 kHz · mono · Int16)');
         } catch (e) {
             const msg = e instanceof Error ? e.message : 'Failed to access microphone';
             setError(msg);
-            options.onError?.(msg);
+            optionsRef.current.onError?.(msg);
             throw e;
         }
-    }, [getAudioContext, options]);
+    }, [getAudioContext]);
 
     // ── Stop microphone ───────────────────────────────────────────────────────
     const stopMicStream = useCallback(() => {
@@ -274,9 +278,9 @@ export function useAudioStream(options: UseAudioStreamOptions = {}) {
         micStreamRef.current?.getTracks().forEach(t => t.stop());
         micStreamRef.current = null;
         setIsRecording(false);
-        options.onStatusChange?.('stopped');
+        optionsRef.current.onStatusChange?.('stopped');
         console.log('⏹️ PCM mic stream stopped');
-    }, [options]);
+    }, []);
 
     // ── Playback volume ───────────────────────────────────────────────────────
     const setVolume = useCallback((level: number) => {

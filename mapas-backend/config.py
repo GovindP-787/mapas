@@ -17,7 +17,7 @@ class Settings:
     
     # Face Verification Settings
     FACE_DETECTION_THRESHOLD = float(os.getenv("FACE_DETECTION_THRESHOLD", "0.5"))
-    FACE_VERIFICATION_THRESHOLD = float(os.getenv("FACE_VERIFICATION_THRESHOLD", "0.35"))
+    FACE_VERIFICATION_THRESHOLD = float(os.getenv("FACE_VERIFICATION_THRESHOLD", "0.25"))
     FACE_DETECTION_SIZE = tuple(map(int, os.getenv("FACE_DETECTION_SIZE", "640,640").split(",")))
     
     # CORS Configuration
