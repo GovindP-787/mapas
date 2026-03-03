@@ -16,6 +16,7 @@ interface OperationCardProps {
         safetyCheck: boolean
         icon: any
         slug?: string
+        href?: string
     }
 }
 
@@ -41,7 +42,7 @@ export function OperationCard({ operation }: OperationCardProps) {
     const config = statusConfig[operation.status]
     const StatusIcon = config.icon
     
-    const operationPageUrl = `/dashboard/payload/${operation.slug || operation.id.toLowerCase()}`
+    const operationPageUrl = operation.href ?? `/dashboard/payload/${operation.slug || operation.id.toLowerCase()}`
 
     return (
         <Card className="bg-slate-950 border-slate-950 hover:border-slate-900 transition-colors cursor-pointer group">

@@ -226,6 +226,33 @@ async def tts_test():
         }
 
 
+@app.get("/settings/tts", tags=["Settings"])
+async def get_tts_settings():
+    """Return current TTS provider settings."""
+    return tts_service.get_status()
+
+
+@app.post("/settings/tts", tags=["Settings"])
+async def update_tts_settings(payload: dict):
+    """Update TTS provider settings at runtime.
+
+    Accepted keys: engine, api_key, voice_id, model_id, stability, similarity_boost, language
+    """
+    try:
+        tts_service.configure(
+            engine_type=payload.get("engine"),
+            api_key=payload.get("api_key"),
+            voice_id=payload.get("voice_id"),
+            model_id=payload.get("model_id"),
+            stability=payload.get("stability"),
+            similarity_boost=payload.get("similarity_boost"),
+            language=payload.get("language"),
+        )
+        return {"status": "ok", **tts_service.get_status()}
+    except Exception as e:
+        return {"status": "error", "message": str(e)}
+
+
 # ============================================================================
 # CUSTOMER ENDPOINTS
 # ============================================================================

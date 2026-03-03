@@ -15,7 +15,8 @@ export default function PayloadOperationsPage() {
             status: "ready" as const,
             safetyCheck: true,
             icon: Utensils,
-            slug: "food-delivery"
+            slug: "food-delivery",
+            href: "/dashboard/face-verification"
         },
         {
             id: "OP-PAS-003",

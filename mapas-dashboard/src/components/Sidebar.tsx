@@ -121,8 +121,8 @@ export function Sidebar({ className, isCollapsed, setIsCollapsed }: SidebarProps
 
             {!isCollapsed && (
                 <div className="p-4 text-xs text-slate-500 border-t border-slate-950">
-                    <p>System Ver 2.4.0</p>
-                    <p>Connected to 3 Drones</p>
+                    <p>System Ver 1.4.0</p>
+                    <p>Connected to 2 Drones</p>
                 </div>
             )}
         </div>
