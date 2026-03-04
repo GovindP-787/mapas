@@ -6,6 +6,22 @@ import gsap from "gsap"
 import { ScrollTrigger } from "gsap/ScrollTrigger"
 import Lenis from "lenis"
 import Link from "next/link"
+import { Orbitron, Exo_2, Share_Tech_Mono } from "next/font/google"
+
+const orbitron = Orbitron({
+  subsets: ["latin"],
+  variable: "--font-orbitron",
+  weight: ["400", "500", "600", "700", "800", "900"],
+})
+const exo2 = Exo_2({
+  subsets: ["latin"],
+  variable: "--font-exo2",
+})
+const shareTechMono = Share_Tech_Mono({
+  subsets: ["latin"],
+  weight: "400",
+  variable: "--font-share-tech",
+})
 
 gsap.registerPlugin(ScrollTrigger)
 
@@ -197,7 +213,28 @@ export default function LandingPage() {
   )
 
   return (
-    <div ref={containerRef} className="bg-black text-slate-100 overflow-x-hidden">
+    <div
+      ref={containerRef}
+      className={`${orbitron.variable} ${exo2.variable} ${shareTechMono.variable} landing-page bg-black text-slate-100 overflow-x-hidden`}
+    >
+      <style>{`
+        .landing-page {
+          font-family: var(--font-exo2), sans-serif;
+        }
+        .landing-page h1,
+        .landing-page h2 {
+          font-family: var(--font-orbitron), sans-serif;
+          letter-spacing: 0.02em;
+        }
+        .landing-page .font-mono,
+        .landing-page [class*="tracking-widest"],
+        .landing-page [class*="font-mono"] {
+          font-family: var(--font-share-tech), monospace;
+        }
+        .landing-page .tracking-widest {
+          font-family: var(--font-share-tech), monospace;
+        }
+      `}</style>
 
       {/* NAVBAR */}
       <header className="fixed top-0 left-0 right-0 z-50 flex items-center justify-between px-8 py-4 bg-black/30 backdrop-blur-md border-b border-white/5">
