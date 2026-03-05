@@ -2,7 +2,7 @@
 
 import { useRef, useEffect, useMemo, Suspense } from "react"
 import { Canvas, useFrame, useThree } from "@react-three/fiber"
-import { Environment } from "@react-three/drei"
+import { Environment, ContactShadows } from "@react-three/drei"
 import gsap from "gsap"
 import { ScrollTrigger } from "gsap/ScrollTrigger"
 import * as THREE from "three"
@@ -11,11 +11,11 @@ gsap.registerPlugin(ScrollTrigger)
 
 // ─── Module-level proxy: mutated by GSAP, read by useFrame every tick ────────
 const PROXY = {
-  droneX:     0,
-  droneY:     6,   // starts HIGH above screen — animates DOWN into view
+  droneX:     1.4,  // hero: center-right
+  droneY:     0.2,  // hero: visible from frame 1
   droneZ:     0,
   rotX:       0,
-  rotY:       0.4,
+  rotY:       -0.4,
   rotZ:       0,
   pkgY:       0,
   pkgOpacity: 0,
@@ -257,87 +257,69 @@ function Lights() {
 // ─── Root export ──────────────────────────────────────────────────────────────
 export default function DroneScrollScene() {
   useEffect(() => {
-    // Hard-reset proxy every mount
+    // Hard-reset proxy every mount — drone starts visible in hero
     Object.assign(PROXY, {
-      droneX: 0, droneY: 6, droneZ: 0,
-      rotX: 0, rotY: 0.4, rotZ: 0,
+      droneX: 1.4, droneY: 0.2, droneZ: 0,
+      rotX: 0, rotY: -0.4, rotZ: 0,
       pkgY: 0, pkgOpacity: 0, fov: 50,
     })
 
-    const tweens: gsap.core.Tween[] = []
     const triggers: ScrollTrigger[] = []
 
-    // Intro: drop from y=6 down to y=0.2
-    tweens.push(
-      gsap.to(PROXY, {
-        droneY: 0.2,
-        duration: 1.8,
-        ease: "power3.out",
-        delay: 0.3,
+    // ── MAS section: explicit fromTo keeps start/end values always connected
+    const masTL = gsap.timeline()
+    masTL.fromTo(PROXY,
+      { rotX: 0,        droneX:  1.4, droneY: 0.2, rotY: -0.4 },
+      { rotX: Math.PI,  droneX: -1.4, droneY: 0.4, rotY: Math.PI - 0.4, ease: "power2.inOut", duration: 1 }
+    )
+    triggers.push(
+      ScrollTrigger.create({
+        trigger:   "#mas",
+        start:     "top 80%",
+        end:       "bottom 20%",
+        scrub:     1.5,
+        animation: masTL,
       })
     )
 
-    // MAS section — roll 180° to expose underbelly
+    // ── Delivery: starts where MAS ends
+    const deliveryTL = gsap.timeline()
+    deliveryTL
+      .fromTo(PROXY,
+        { rotX: Math.PI,  droneX: -1.4, rotY: Math.PI - 0.4, pkgOpacity: 0, pkgY: 0 },
+        { rotX: -0.3,     droneX:  0,   rotY: -0.4,           ease: "power2.inOut", duration: 0.5 }
+      )
+      .fromTo(PROXY,
+        { pkgOpacity: 0, pkgY: 0 },
+        { pkgOpacity: 1, pkgY: -0.7, ease: "power1.inOut", duration: 0.5 }
+      )
     triggers.push(
       ScrollTrigger.create({
-        trigger: "#mas",
-        start: "top 75%",
-        end: "bottom 25%",
-        scrub: 1.5,
-        onUpdate(self) {
-          const p = self.progress
-          PROXY.rotX   = THREE.MathUtils.lerp(0, Math.PI, p)
-          PROXY.droneX = THREE.MathUtils.lerp(0, 1.6, p)
-          PROXY.droneY = THREE.MathUtils.lerp(0.2, 0.4, p)
-        },
+        trigger:   "#section-delivery",
+        start:     "top 80%",
+        end:       "bottom 20%",
+        scrub:     1.5,
+        animation: deliveryTL,
       })
     )
 
-    // Delivery — pitch forward, then package drops
-    triggers.push(
-      ScrollTrigger.create({
-        trigger: "#section-delivery",
-        start: "top 75%",
-        end: "bottom 20%",
-        scrub: 1.5,
-        onUpdate(self) {
-          const p = self.progress
-          if (p < 0.45) {
-            const t = p / 0.45
-            PROXY.rotX   = THREE.MathUtils.lerp(Math.PI, -0.3, t)
-            PROXY.droneX = 1.6
-            PROXY.rotY   = THREE.MathUtils.lerp(0.4, -0.4, t)
-          } else {
-            const t = (p - 0.45) / 0.55
-            PROXY.rotX       = -0.3
-            PROXY.pkgOpacity = THREE.MathUtils.lerp(0, 1, t)
-            PROXY.pkgY       = THREE.MathUtils.lerp(0, -0.7, t)
-          }
-        },
-      })
+    // ── Rescue: starts where delivery ends
+    const rescueTL = gsap.timeline()
+    rescueTL.fromTo(PROXY,
+      { rotX: -0.3, rotY: -0.4, droneX: 0, droneZ: 0, pkgOpacity: 1, fov: 50 },
+      { rotX:  0.1, rotY:  0,   droneX: 0, droneZ: 2.8, pkgOpacity: 0, fov: 28, ease: "power2.inOut", duration: 1 }
     )
-
-    // Rescue — zoom in close to sensor eye
     triggers.push(
       ScrollTrigger.create({
-        trigger: "#section-rescue",
-        start: "top 75%",
-        end: "bottom 20%",
-        scrub: 1.5,
-        onUpdate(self) {
-          const p = self.progress
-          PROXY.rotX       = THREE.MathUtils.lerp(-0.3, 0.1, p)
-          PROXY.rotY       = THREE.MathUtils.lerp(-0.4, 0, p)
-          PROXY.droneX     = THREE.MathUtils.lerp(1.6, 0, p)
-          PROXY.droneZ     = THREE.MathUtils.lerp(0, 2.8, p)
-          PROXY.pkgOpacity = THREE.MathUtils.lerp(1, 0, p)
-          PROXY.fov        = THREE.MathUtils.lerp(50, 28, p)
-        },
+        trigger:   "#section-rescue",
+        start:     "top 80%",
+        end:       "bottom 20%",
+        scrub:     1.5,
+        animation: rescueTL,
       })
     )
 
     return () => {
-      tweens.forEach(tw => tw.kill())
       triggers.forEach(tr => tr.kill())
     }
   }, [])
@@ -353,21 +335,29 @@ export default function DroneScrollScene() {
         dpr={[1, 1.5]}
         gl={{
           antialias: true,
+          alpha: true,                           // transparent canvas
           toneMapping: THREE.ACESFilmicToneMapping,
           toneMappingExposure: 2.2,
         }}
         onCreated={({ gl }) => {
-          gl.setClearColor(new THREE.Color(0x000010), 1)
+          gl.setClearColor(0x000000, 0)          // fully transparent clear
         }}
-        style={{ background: "#000010" }}
+        style={{ background: "transparent" }}
       >
         <CameraRig />
         <Lights />
 
-        {/* Subtle grid floor */}
-        <gridHelper args={[20, 20, "#0ea5e912", "#0ea5e906"]} position={[0, -2.2, 0]} />
-
         <DroneModel />
+
+        {/* Contact shadow for grounding */}
+        <ContactShadows
+          position={[0, -2.0, 0]}
+          opacity={0.45}
+          scale={6}
+          blur={2.8}
+          far={4}
+          color="#0ea5e9"
+        />
 
         <Suspense fallback={null}>
           <Environment preset="city" />

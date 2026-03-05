@@ -7,6 +7,9 @@ import { ScrollTrigger } from "gsap/ScrollTrigger"
 import Lenis from "lenis"
 import Link from "next/link"
 import { Orbitron, Exo_2, Share_Tech_Mono } from "next/font/google"
+import dynamic from "next/dynamic"
+
+const DroneScrollScene = dynamic(() => import("@/components/DroneScrollScene"), { ssr: false })
 
 const orbitron = Orbitron({
   subsets: ["latin"],
@@ -137,10 +140,6 @@ export default function LandingPage() {
   useGSAP(
     () => {
       // ── Hero ──────────────────────────────────────────────────
-      gsap.fromTo(".hero-drone",
-        { y: -120, opacity: 0, scale: 0.6 },
-        { y: 0, opacity: 1, scale: 1, duration: 1.6, ease: "power3.out", delay: 0.4 }
-      )
       gsap.fromTo(".hero-title",
         { y: 60, opacity: 0 },
         { y: 0, opacity: 1, duration: 1.2, ease: "power3.out", delay: 0.2 }
@@ -153,10 +152,6 @@ export default function LandingPage() {
         { y: 30, opacity: 0 },
         { y: 0, opacity: 1, duration: 0.9, ease: "power3.out", delay: 1.1 }
       )
-      gsap.to(".hero-drone", {
-        y: -18, duration: 2.5, ease: "sine.inOut", yoyo: true, repeat: -1, delay: 2,
-      })
-
       // ── MAS Section ───────────────────────────────────────────
       gsap.fromTo(".mas-text",
         { x: -80, opacity: 0 },
@@ -217,6 +212,8 @@ export default function LandingPage() {
       ref={containerRef}
       className={`${orbitron.variable} ${exo2.variable} ${shareTechMono.variable} landing-page bg-black text-slate-100 overflow-x-hidden`}
     >
+      {/* Fixed 3D drone background — scrolls with the page via GSAP */}
+      <DroneScrollScene />
       <style>{`
         .landing-page {
           font-family: var(--font-exo2), sans-serif;
@@ -256,11 +253,6 @@ export default function LandingPage() {
         <div className="absolute inset-0 bg-[linear-gradient(to_right,#80808008_1px,transparent_1px),linear-gradient(to_bottom,#80808008_1px,transparent_1px)] bg-[size:40px_40px]" />
         <div className="absolute top-1/4 left-1/2 -translate-x-1/2 w-[600px] h-[600px] bg-sky-500/10 rounded-full blur-[120px] pointer-events-none" />
         <div className="absolute top-1/3 left-1/4 w-[300px] h-[300px] bg-orange-500/5 rounded-full blur-[80px] pointer-events-none" />
-
-        <div className="hero-drone mb-8 relative">
-          <div className="absolute inset-0 bg-sky-400/20 rounded-full blur-2xl scale-150" />
-          <DroneMothershipSVG className="w-72 md:w-96 relative z-10 drop-shadow-[0_0_30px_rgba(56,189,248,0.5)]" />
-        </div>
 
         <h1 className="hero-title text-5xl md:text-7xl lg:text-8xl font-black tracking-tight leading-none mb-6 max-w-4xl">
           The Future of{" "}
@@ -389,7 +381,7 @@ export default function LandingPage() {
       </section>
 
       {/* DELIVERY SECTION */}
-      <section className="delivery-section relative min-h-screen flex flex-col md:flex-row items-center justify-center gap-20 px-8 md:px-20 py-32">
+      <section id="section-delivery" className="delivery-section relative min-h-screen flex flex-col md:flex-row items-center justify-center gap-20 px-8 md:px-20 py-32">
         <div className="absolute inset-0 bg-gradient-to-br from-black via-cyan-950/10 to-black" />
         <div className="absolute left-1/4 top-1/2 w-[400px] h-[400px] bg-cyan-500/8 rounded-full blur-[100px] pointer-events-none" />
 
@@ -433,7 +425,7 @@ export default function LandingPage() {
       </section>
 
       {/* DROWNING DETECTION SECTION */}
-      <section className="radar-section relative min-h-screen flex flex-col md:flex-row items-center justify-center gap-20 px-8 md:px-20 py-32 overflow-hidden">
+      <section id="section-rescue" className="radar-section relative min-h-screen flex flex-col md:flex-row items-center justify-center gap-20 px-8 md:px-20 py-32 overflow-hidden">
         <div className="absolute inset-0 bg-gradient-to-br from-black via-blue-950/30 to-black" />
         <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_bottom,rgba(14,165,233,0.12)_0%,transparent_70%)]" />
         <svg className="absolute bottom-0 left-0 w-full opacity-10" viewBox="0 0 1440 200" preserveAspectRatio="none">
