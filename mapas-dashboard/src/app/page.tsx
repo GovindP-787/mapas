@@ -495,7 +495,35 @@ export default function LandingPage() {
           </Link>
         </div>
 
-        <div className="relative z-10 mt-24 pt-8 border-t border-slate-900 text-xs text-slate-600 font-mono">
+        {/* ── Team ─────────────────────────────────────────────────────── */}
+        <div className="relative z-10 mt-20 max-w-3xl mx-auto">
+          <p className="text-xs font-mono text-sky-500 tracking-[0.3em] uppercase mb-8">— Contact the Team —</p>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            {[
+              { name: "Edwin Baiju",  email: "edwinbaiju@mapas.dev"  },
+              { name: "George Siby",  email: "georgesiby@mapas.dev"  },
+              { name: "Govind P",     email: "govindp@mapas.dev"     },
+              { name: "Ron Thomas",   email: "ronthomas@mapas.dev"   },
+            ].map(({ name, email }) => (
+              <a
+                key={email}
+                href={`mailto:${email}`}
+                className="group flex flex-col gap-3 p-5 rounded-xl border border-slate-800 bg-slate-900/50 hover:border-sky-500/50 hover:bg-slate-800/60 transition-all text-left"
+              >
+                <div>
+                  <p className="text-sm font-semibold text-slate-200 group-hover:text-sky-400 transition-colors leading-tight">
+                    {name}
+                  </p>
+                  <p className="text-xs font-mono text-slate-500 group-hover:text-sky-500 transition-colors mt-1 break-all">
+                    {email}
+                  </p>
+                </div>
+              </a>
+            ))}
+          </div>
+        </div>
+
+        <div className="relative z-10 mt-16 pt-8 border-t border-slate-900 text-xs text-slate-600 font-mono">
           MAPAS · MOTHERSHIP AUTONOMOUS SYSTEM · {new Date().getFullYear()}
         </div>
       </section>

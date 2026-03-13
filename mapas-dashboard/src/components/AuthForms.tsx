@@ -8,25 +8,98 @@ import { Label } from "@/components/ui/label"
 import { Plane, Lock, Mail, User, ShieldCheck } from "lucide-react"
 import { toast } from "sonner"
 import { useRouter } from "next/navigation"
+import { signIn } from "next-auth/react"
 
 export function AuthForms() {
     // TRUE = Login Mode
     // FALSE = Signup Mode
     const [isLogin, setIsLogin] = React.useState(true)
+    const [loading, setLoading] = React.useState(false)
     const router = useRouter()
 
-    const handleSubmit = (e: React.FormEvent) => {
+    const handleLogin = async (e: React.FormEvent<HTMLFormElement>) => {
         e.preventDefault()
+        setLoading(true)
+        try {
+            const form = new FormData(e.currentTarget)
+            const result = await signIn("credentials", {
+                email: form.get("email") as string,
+                password: form.get("password") as string,
+                redirect: false,
+                callbackUrl: "/dashboard",
+            })
 
-        toast.success("Authentication Successful", {
-            description: isLogin
-                ? "Welcome back, Commander."
-                : "Account created. Awaiting clearance.",
-        })
+            if (!result || result.error) {
+                toast.error("Access Denied", { description: "Invalid credentials." })
+                return
+            }
 
-        setTimeout(() => {
-            router.push("/dashboard")
-        }, 800)
+            toast.success("Authentication Successful", { description: "Welcome back." })
+            router.replace(result.url ?? "/dashboard")
+            router.refresh()
+        } catch {
+            toast.error("Authentication Error", { description: "Could not sign in. Please try again." })
+        } finally {
+            setLoading(false)
+        }
+    }
+
+    const handleSignup = async (e: React.FormEvent<HTMLFormElement>) => {
+        e.preventDefault()
+        setLoading(true)
+
+        try {
+            const form = new FormData(e.currentTarget)
+            const payload = {
+                name: String(form.get("name") ?? ""),
+                email: String(form.get("email") ?? ""),
+                password: String(form.get("password") ?? ""),
+                clearanceCode: String(form.get("clearanceCode") ?? ""),
+            }
+
+            const response = await fetch("/api/auth/register", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                },
+                body: JSON.stringify(payload),
+            })
+
+            const data = (await response.json()) as { error?: string }
+            if (!response.ok) {
+                toast.error("Signup Failed", {
+                    description: data.error ?? "Unable to create account.",
+                })
+                return
+            }
+
+            const loginResult = await signIn("credentials", {
+                email: payload.email,
+                password: payload.password,
+                redirect: false,
+                callbackUrl: "/dashboard",
+            })
+
+            if (!loginResult || loginResult.error) {
+                toast.success("Account Created", {
+                    description: "Sign in using your new credentials.",
+                })
+                setIsLogin(true)
+                return
+            }
+
+            toast.success("Account Created", {
+                description: "Your operator account is active.",
+            })
+            router.replace(loginResult.url ?? "/dashboard")
+            router.refresh()
+        } catch {
+            toast.error("Signup Error", {
+                description: "Could not create account. Please try again.",
+            })
+        } finally {
+            setLoading(false)
+        }
     }
 
     return (
@@ -47,7 +120,7 @@ export function AuthForms() {
                 "absolute top-0 left-0 w-full md:w-[60%] h-full flex items-center justify-center p-10 md:p-14 transition-all duration-700 bg-slate-950 z-10",
                 isLogin ? "opacity-100 pointer-events-auto" : "opacity-0 pointer-events-none"
             )}>
-                <form onSubmit={handleSubmit} className="w-full max-w-md space-y-6">
+                <form onSubmit={handleLogin} className="w-full max-w-md space-y-6">
                     <div className="text-center space-y-2">
                         <h2 className="text-2xl font-bold tracking-tight text-sky-400">
                             Welcome Back
@@ -64,6 +137,8 @@ export function AuthForms() {
                                 <Mail className="absolute left-3 top-3 h-4 w-4 text-slate-500" />
                                 <Input
                                     required
+                                    name="email"
+                                    type="email"
                                     placeholder="pilot@mapas.com"
                                     className="pl-9 bg-slate-950 border-slate-950"
                                 />
@@ -76,6 +151,7 @@ export function AuthForms() {
                                 <Lock className="absolute left-3 top-3 h-4 w-4 text-slate-500" />
                                 <Input
                                     required
+                                    name="password"
                                     type="password"
                                     placeholder="••••••••"
                                     className="pl-9 bg-slate-950 border-slate-950"
@@ -84,13 +160,14 @@ export function AuthForms() {
                         </div>
                     </div>
 
-                    <Button className="w-full bg-sky-600 hover:bg-sky-500 font-semibold">
-                        Sign In
+                    <Button type="submit" disabled={loading} className="w-full bg-sky-600 hover:bg-sky-500 font-semibold">
+                        {loading ? "Authenticating..." : "Sign In"}
                     </Button>
 
                     <div className="md:hidden pt-4 border-t border-slate-950 text-center">
                         <p className="text-sm text-slate-400 mb-2">New here?</p>
                         <Button
+                            type="button"
                             variant="outline"
                             onClick={() => setIsLogin(false)}
                             className="w-full"
@@ -106,7 +183,7 @@ export function AuthForms() {
                 "absolute top-0 right-0 w-full md:w-[60%] h-full flex items-center justify-center p-10 md:p-14 transition-all duration-700 bg-slate-950 z-10",
                 !isLogin ? "opacity-100 pointer-events-auto" : "opacity-0 pointer-events-none"
             )}>
-                <form onSubmit={handleSubmit} className="w-full max-w-md space-y-6">
+                <form onSubmit={handleSignup} className="w-full max-w-md space-y-6">
                     <div className="text-center space-y-2">
                         <h2 className="text-2xl font-bold tracking-tight text-emerald-400">
                             Initialize Account
@@ -123,6 +200,7 @@ export function AuthForms() {
                                 <User className="absolute left-3 top-3 h-4 w-4 text-slate-500" />
                                 <Input
                                     required
+                                    name="name"
                                     placeholder="John Doe"
                                     className="pl-9 bg-slate-950 border-slate-950"
                                 />
@@ -135,6 +213,8 @@ export function AuthForms() {
                                 <Mail className="absolute left-3 top-3 h-4 w-4 text-slate-500" />
                                 <Input
                                     required
+                                    name="email"
+                                    type="email"
                                     placeholder="operator@mapas.com"
                                     className="pl-9 bg-slate-950 border-slate-950"
                                 />
@@ -147,16 +227,31 @@ export function AuthForms() {
                                 <ShieldCheck className="absolute left-3 top-3 h-4 w-4 text-slate-500" />
                                 <Input
                                     required
+                                    name="clearanceCode"
                                     type="password"
                                     placeholder="SECRET-KEY"
                                     className="pl-9 bg-slate-950 border-slate-950"
                                 />
                             </div>
                         </div>
+
+                        <div>
+                            <Label>Password</Label>
+                            <div className="relative mt-1">
+                                <Lock className="absolute left-3 top-3 h-4 w-4 text-slate-500" />
+                                <Input
+                                    required
+                                    name="password"
+                                    type="password"
+                                    placeholder="Create a secure password"
+                                    className="pl-9 bg-slate-950 border-slate-950"
+                                />
+                            </div>
+                        </div>
                     </div>
 
-                    <Button className="w-full bg-emerald-600 hover:bg-emerald-500 font-semibold">
-                        Create Account
+                    <Button type="submit" disabled={loading} className="w-full bg-emerald-600 hover:bg-emerald-500 font-semibold">
+                        {loading ? "Creating Account..." : "Create Account"}
                     </Button>
 
                     <div className="md:hidden pt-4 border-t border-slate-950 text-center">
@@ -164,6 +259,7 @@ export function AuthForms() {
                             Already have an account?
                         </p>
                         <Button
+                            type="button"
                             variant="outline"
                             onClick={() => setIsLogin(true)}
                             className="w-full"
@@ -196,6 +292,7 @@ export function AuthForms() {
                                 Join the MAPAS autonomous fleet network.
                             </p>
                             <Button
+                                type="button"
                                 variant="outline"
                                 onClick={() => setIsLogin(false)}
                                 className="border-emerald-400 text-emerald-300 hover:bg-emerald-500/20"
@@ -215,6 +312,7 @@ export function AuthForms() {
                                 Authenticate with your existing credentials.
                             </p>
                             <Button
+                                type="button"
                                 variant="outline"
                                 onClick={() => setIsLogin(true)}
                                 className="border-sky-400 text-sky-300 hover:bg-sky-500/20"
