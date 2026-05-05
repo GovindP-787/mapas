@@ -7,6 +7,7 @@ import base64
 import json
 import queue
 import threading
+from pymavlink import mavutil
 
 from config import settings
 from logger import get_logger
@@ -32,6 +33,31 @@ from services.tts_service import get_tts_service
 from services.audio_service import get_audio_service
 
 log = get_logger("mapas.backend")
+
+# Drone telemetry state
+drone_telemetry = {"alt": 0, "pitch": 0, "roll": 0, "heading": 0}
+
+def drone_telemetry_listener():
+    try:
+        log.info("Starting MAVLink telemetry listener on udpin:localhost:14445")
+        connection = mavutil.mavlink_connection('udpin:localhost:14445')
+        while True:
+            msg = connection.recv_match(blocking=True)
+            if not msg:
+                continue
+            
+            msg_type = msg.get_type()
+            if msg_type == 'ATTITUDE':
+                drone_telemetry['pitch'] = msg.pitch
+                drone_telemetry['roll'] = msg.roll
+            elif msg_type == 'VFR_HUD':
+                drone_telemetry['alt'] = msg.alt
+                drone_telemetry['heading'] = msg.heading
+    except Exception as e:
+        log.error(f"Error in telemetry listener: {e}")
+
+telemetry_thread = threading.Thread(target=drone_telemetry_listener, daemon=True)
+telemetry_thread.start()
 
 
 # Initialize FastAPI app
@@ -162,6 +188,16 @@ async def load_customer_embeddings():
 
 
 # ============================================================================
+# DRONE TELEMETRY ENDPOINTS
+# ============================================================================
+
+@app.get("/drone/telemetry", tags=["Drone"])
+async def get_drone_telemetry():
+    """Returns the latest MAVLink telemetry data from QGroundControl."""
+    return drone_telemetry
+
+
+# ============================================================================
 # HEALTH CHECK ENDPOINTS
 # ============================================================================
 
@@ -212,12 +248,21 @@ async def readiness_check():
 async def tts_test():
     """Test text-to-speech system."""
     try:
+        validation = tts_service.validate_provider()
+        if not validation.get("ok"):
+            return {
+                "status": "error",
+                "provider": validation.get("provider"),
+                "message": validation.get("message", "TTS provider validation failed."),
+            }
+
         test_message = "Testing audio system. If you hear this, text to speech is working."
         tts_service.text_to_speech_simple(test_message)
         return {
-            "status": "testing",
+            "status": "ok",
+            "provider": validation.get("provider"),
             "message": "TTS test started. Check your speakers for audio output.",
-            "test_message": test_message
+            "test_message": test_message,
         }
     except Exception as e:
         return {

@@ -248,6 +248,49 @@ engine.runAndWait()
         else:
             self._pyttsx3_subprocess(text)
 
+    def validate_provider(self) -> dict:
+        """Validate current TTS provider configuration.
+
+        For ElevenLabs, this performs a small synthesis request and reports whether
+        the configured key, voice, and model are valid.
+        """
+        if self.engine_type != "elevenlabs":
+            return {
+                "ok": True,
+                "provider": "pyttsx3",
+                "message": "Offline pyttsx3 provider is active.",
+            }
+
+        if not self.api_key:
+            return {
+                "ok": False,
+                "provider": "elevenlabs",
+                "message": "ElevenLabs API key is missing.",
+            }
+
+        probe_audio = _elevenlabs_synthesize(
+            text="Voice check.",
+            api_key=self.api_key,
+            voice_id=self.voice_id,
+            model_id=self.model_id,
+            stability=self.stability,
+            similarity_boost=self.similarity_boost,
+            language=self.language,
+        )
+
+        if not probe_audio:
+            return {
+                "ok": False,
+                "provider": "elevenlabs",
+                "message": "ElevenLabs rejected the current key, voice, or model.",
+            }
+
+        return {
+            "ok": True,
+            "provider": "elevenlabs",
+            "message": "ElevenLabs voice configuration is valid.",
+        }
+
     def synthesize_and_play(self, text: str, filename: Optional[str] = None) -> str:
         """Synthesise, save to file, and play.  Returns the saved path."""
         if not filename:
@@ -283,6 +326,7 @@ engine.runAndWait()
     def get_status(self) -> dict:
         return {
             "engine": self.engine_type,
+            "active_provider": "elevenlabs" if self._use_elevenlabs else "pyttsx3",
             "elevenlabs_configured": bool(self.api_key),
             "voice_id": self.voice_id,
             "model_id": self.model_id,
