@@ -14,8 +14,29 @@ export function AuthForms() {
     // TRUE = Login Mode
     // FALSE = Signup Mode
     const [isLogin, setIsLogin] = React.useState(true)
+    const [isRecovering, setIsRecovering] = React.useState(false)
     const [loading, setLoading] = React.useState(false)
     const router = useRouter()
+
+    const launchQGroundControl = React.useCallback(async () => {
+        try {
+            await fetch("/api/system/launch-qgroundcontrol", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                },
+            })
+        } catch {
+            // Avoid blocking authentication flow if local app launch is unavailable.
+        }
+    }, [])
+
+    const refocusBrowserWindow = React.useCallback(() => {
+        // Refocus shortly after launch attempt in case native app steals focus.
+        requestAnimationFrame(() => window.focus())
+        setTimeout(() => window.focus(), 120)
+        setTimeout(() => window.focus(), 300)
+    }, [])
 
     const handleLogin = async (e: React.FormEvent<HTMLFormElement>) => {
         e.preventDefault()
@@ -102,6 +123,57 @@ export function AuthForms() {
         }
     }
 
+    const handleRecovery = async (e: React.FormEvent<HTMLFormElement>) => {
+        e.preventDefault()
+        setLoading(true)
+
+        try {
+            const form = new FormData(e.currentTarget)
+            const email = String(form.get("email") ?? "")
+            const clearanceCode = String(form.get("clearanceCode") ?? "")
+            const newPassword = String(form.get("newPassword") ?? "")
+            const confirmPassword = String(form.get("confirmPassword") ?? "")
+
+            if (newPassword !== confirmPassword) {
+                toast.error("Password mismatch", {
+                    description: "New password and confirmation do not match.",
+                })
+                return
+            }
+
+            const response = await fetch("/api/auth/recover", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                },
+                body: JSON.stringify({
+                    email,
+                    clearanceCode,
+                    newPassword,
+                }),
+            })
+
+            const data = (await response.json()) as { error?: string }
+            if (!response.ok) {
+                toast.error("Recovery failed", {
+                    description: data.error ?? "Unable to reset password.",
+                })
+                return
+            }
+
+            toast.success("Password updated", {
+                description: "Sign in with your new password.",
+            })
+            setIsRecovering(false)
+        } catch {
+            toast.error("Recovery error", {
+                description: "Could not reset password. Please try again.",
+            })
+        } finally {
+            setLoading(false)
+        }
+    }
+
     return (
         <div className="
       relative
@@ -120,13 +192,15 @@ export function AuthForms() {
                 "absolute top-0 left-0 w-full md:w-[60%] h-full flex items-center justify-center p-10 md:p-14 transition-all duration-700 bg-slate-950 z-10",
                 isLogin ? "opacity-100 pointer-events-auto" : "opacity-0 pointer-events-none"
             )}>
-                <form onSubmit={handleLogin} className="w-full max-w-md space-y-6">
+                <form onSubmit={isRecovering ? handleRecovery : handleLogin} className="w-full max-w-md space-y-6">
                     <div className="text-center space-y-2">
                         <h2 className="text-2xl font-bold tracking-tight text-sky-400">
-                            Welcome Back
+                            {isRecovering ? "Password Recovery" : "Welcome Back"}
                         </h2>
                         <p className="text-slate-400 text-sm">
-                            Enter your credentials to access mission control.
+                            {isRecovering
+                                ? "Reset an operator password using clearance code."
+                                : "Enter your credentials to access mission control."}
                         </p>
                     </div>
 
@@ -145,24 +219,83 @@ export function AuthForms() {
                             </div>
                         </div>
 
-                        <div>
-                            <Label>Password</Label>
-                            <div className="relative mt-1">
-                                <Lock className="absolute left-3 top-3 h-4 w-4 text-slate-500" />
-                                <Input
-                                    required
-                                    name="password"
-                                    type="password"
-                                    placeholder="••••••••"
-                                    className="pl-9 bg-slate-950 border-slate-950"
-                                />
+                        {isRecovering ? (
+                            <>
+                                <div>
+                                    <Label>Clearance Code</Label>
+                                    <div className="relative mt-1">
+                                        <ShieldCheck className="absolute left-3 top-3 h-4 w-4 text-slate-500" />
+                                        <Input
+                                            required
+                                            name="clearanceCode"
+                                            type="password"
+                                            placeholder="SECRET-KEY"
+                                            className="pl-9 bg-slate-950 border-slate-950"
+                                        />
+                                    </div>
+                                </div>
+
+                                <div>
+                                    <Label>New Password</Label>
+                                    <div className="relative mt-1">
+                                        <Lock className="absolute left-3 top-3 h-4 w-4 text-slate-500" />
+                                        <Input
+                                            required
+                                            name="newPassword"
+                                            type="password"
+                                            minLength={6}
+                                            placeholder="Create a new password"
+                                            className="pl-9 bg-slate-950 border-slate-950"
+                                        />
+                                    </div>
+                                </div>
+
+                                <div>
+                                    <Label>Confirm New Password</Label>
+                                    <div className="relative mt-1">
+                                        <Lock className="absolute left-3 top-3 h-4 w-4 text-slate-500" />
+                                        <Input
+                                            required
+                                            name="confirmPassword"
+                                            type="password"
+                                            minLength={6}
+                                            placeholder="Re-enter new password"
+                                            className="pl-9 bg-slate-950 border-slate-950"
+                                        />
+                                    </div>
+                                </div>
+                            </>
+                        ) : (
+                            <div>
+                                <Label>Password</Label>
+                                <div className="relative mt-1">
+                                    <Lock className="absolute left-3 top-3 h-4 w-4 text-slate-500" />
+                                    <Input
+                                        required
+                                        name="password"
+                                        type="password"
+                                        placeholder="••••••••"
+                                        className="pl-9 bg-slate-950 border-slate-950"
+                                    />
+                                </div>
                             </div>
-                        </div>
+                        )}
                     </div>
 
                     <Button type="submit" disabled={loading} className="w-full bg-sky-600 hover:bg-sky-500 font-semibold">
-                        {loading ? "Authenticating..." : "Sign In"}
+                        {loading ? (isRecovering ? "Updating Password..." : "Authenticating...") : (isRecovering ? "Reset Password" : "Sign In")}
                     </Button>
+
+                    <div className="text-center">
+                        <Button
+                            type="button"
+                            variant="link"
+                            onClick={() => setIsRecovering((value) => !value)}
+                            className="text-sky-400 hover:text-sky-300"
+                        >
+                            {isRecovering ? "Back to Sign In" : "Forgot password?"}
+                        </Button>
+                    </div>
 
                     <div className="md:hidden pt-4 border-t border-slate-950 text-center">
                         <p className="text-sm text-slate-400 mb-2">New here?</p>

@@ -263,7 +263,7 @@ export default function LandingPage() {
         </h1>
         <p className="hero-sub text-lg md:text-xl text-slate-400 max-w-2xl mb-10 leading-relaxed">
           MAPAS deploys intelligent drone systems for verified delivery, public safety broadcasts,
-          and real-time drowning detection — all from a single command platform.
+          and disaster surveillance — all from a single command platform.
         </p>
         <div className="hero-cta flex flex-wrap gap-4 justify-center">
           <Link href="/login" className="px-8 py-3 bg-sky-500 hover:bg-sky-400 text-black font-bold rounded-md transition-all hover:scale-105 text-sm">
@@ -288,7 +288,7 @@ export default function LandingPage() {
         <div className="mas-text relative z-10 max-w-lg space-y-6">
           <div className="flex items-center gap-3">
             <span className="text-xs font-mono text-sky-400 tracking-[0.3em] uppercase border border-sky-500/30 px-3 py-1 rounded-full">
-              DR-ALPHA-01
+              MAS
             </span>
           </div>
           <h2 className="text-4xl md:text-6xl font-black leading-tight">
@@ -330,7 +330,7 @@ export default function LandingPage() {
           <div className="absolute inset-0 bg-[linear-gradient(to_right,#f9731605_1px,transparent_1px),linear-gradient(to_bottom,#f9731605_1px,transparent_1px)] bg-[size:30px_30px]" />
           <div className="relative z-10 max-w-sm space-y-6">
             <span className="text-xs font-mono text-orange-400 tracking-[0.3em] border border-orange-500/30 px-3 py-1 rounded-full">
-              DR-BETA-04
+             PAS
             </span>
             <h2 className="text-4xl md:text-5xl font-black leading-tight">
               Piloted<br />
@@ -373,9 +373,7 @@ export default function LandingPage() {
                 </div>
               </div>
             </div>
-            <p className="text-xs font-mono text-orange-400/60 tracking-widest text-center mt-24">
-              MAX SPEED 120 KM/H · &lt;20ms LATENCY
-            </p>
+            
           </div>
         </div>
       </section>
@@ -411,8 +409,8 @@ export default function LandingPage() {
           <div className="space-y-3">
             {[
               ["01", "Drone arrives at GPS-locked delivery point"],
-              ["02", "Camera activates — recipient scanned in &lt;1s"],
-              ["03", "Face matched against enrolled customer DB"],
+              ["02", "Camera activates"],
+              ["03", "Face matched against enrolled customer"],
               ["04", "Payload bay unlocks — package released"],
             ].map(([num, step]) => (
               <div key={num} className="delivery-step flex items-center gap-4 bg-slate-900/60 border border-slate-800 rounded-lg px-4 py-3">
@@ -455,14 +453,14 @@ export default function LandingPage() {
             Save Lives.
           </h2>
           <p className="text-slate-400 text-sm leading-relaxed">
-            MAS carries a <span className="text-slate-200">YOLO11-powered drowning detection model</span> that
-            continuously scans water bodies. Once a distress pattern is detected, PAS is deployed
-            for close-range confirmation while MAS coordinates emergency response.
+            Equipped with <span className="text-slate-200">YOLO11-powered computer vision</span>, MAS continuously 
+            scans disaster zones to locate survivors and assess structural damage. When a critical area is identified, 
+            PAS is deployed to navigate tight debris spaces while MAS relays live coordinates to ground rescue teams.
           </p>
           <div className="grid grid-cols-2 gap-3">
             {[
-              ["Real-time scanning", "30 fps continuous detection"],
-              ["YOLO11 model", "Trained on water distress data"],
+              ["Real-time scanning"],
+              ["YOLO11 model", "Trained on disaster rescue data"],
               ["< 2s alert time", "From detect to emergency signal"],
               ["Night capable", "IR + thermal assisted vision"],
             ].map(([title, desc]) => (

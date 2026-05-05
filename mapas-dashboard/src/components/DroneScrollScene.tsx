@@ -11,7 +11,7 @@ gsap.registerPlugin(ScrollTrigger)
 
 // ─── Module-level proxy: mutated by GSAP, read by useFrame every tick ────────
 const PROXY = {
-  droneX:     1.4,  // hero: center-right
+  droneX:     0,    // hero: centered
   droneY:     0.2,  // hero: visible from frame 1
   droneZ:     0,
   rotX:       0,
@@ -96,7 +96,7 @@ function DroneModel() {
       p.droneY + Math.sin(t * 1.3) * 0.08,
       p.droneZ,
     )
-    root.current.rotation.set(p.rotX, p.rotY + t * 0.12, p.rotZ)
+    root.current.rotation.set(p.rotX, p.rotY, p.rotZ)
 
     pkgMesh.current.position.y  = -0.58 + p.pkgY
     wireMesh.current.position.y = -0.38 + p.pkgY * 0.5
@@ -259,35 +259,42 @@ export default function DroneScrollScene() {
   useEffect(() => {
     // Hard-reset proxy every mount — drone starts visible in hero
     Object.assign(PROXY, {
-      droneX: 1.4, droneY: 0.2, droneZ: 0,
+      droneX: 0, droneY: 0.2, droneZ: 0,
       rotX: 0, rotY: -0.4, rotZ: 0,
       pkgY: 0, pkgOpacity: 0, fov: 50,
     })
 
     const triggers: ScrollTrigger[] = []
 
-    // ── MAS section: explicit fromTo keeps start/end values always connected
+    // ── MAS section: swoop from hero center → right column (where the SVG was)
+    // Phase 1: bank right with a dip (enter from center, roll / pitch forward)
+    // Phase 2: level out and settle into the right-column position
     const masTL = gsap.timeline()
-    masTL.fromTo(PROXY,
-      { rotX: 0,        droneX:  1.4, droneY: 0.2, rotY: -0.4 },
-      { rotX: Math.PI,  droneX: -1.4, droneY: 0.4, rotY: Math.PI - 0.4, ease: "power2.inOut", duration: 1 }
-    )
+    masTL
+      .fromTo(PROXY,
+        { droneX:  0,   droneY: 0.2,  rotX: 0,    rotY: -0.4, rotZ:  0    },
+        { droneX:  1.4, droneY: 0.0,  rotX: 0.18, rotY: -0.7, rotZ: -0.28, ease: "power3.out", duration: 0.6 }
+      )
+      .fromTo(PROXY,
+        { droneY: 0.0,  rotX: 0.18, rotZ: -0.28 },
+        { droneY: 0.22, rotX: 0.05, rotZ:  0,    ease: "power2.inOut", duration: 0.4 }
+      )
     triggers.push(
       ScrollTrigger.create({
         trigger:   "#mas",
-        start:     "top 80%",
-        end:       "bottom 20%",
+        start:     "top 85%",
+        end:       "center 30%",
         scrub:     1.5,
         animation: masTL,
       })
     )
 
-    // ── Delivery: starts where MAS ends
+    // ── Delivery: starts where MAS swoop lands (droneX:1.4, rotY:-0.7, rotZ:0)
     const deliveryTL = gsap.timeline()
     deliveryTL
       .fromTo(PROXY,
-        { rotX: Math.PI,  droneX: -1.4, rotY: Math.PI - 0.4, pkgOpacity: 0, pkgY: 0 },
-        { rotX: -0.3,     droneX:  0,   rotY: -0.4,           ease: "power2.inOut", duration: 0.5 }
+        { rotX: 0.05, droneX:  1.4, rotY: -0.7, rotZ: 0, pkgOpacity: 0, pkgY: 0 },
+        { rotX: -0.3, droneX:  0,   rotY: -0.4, rotZ: 0, ease: "power2.inOut", duration: 0.5 }
       )
       .fromTo(PROXY,
         { pkgOpacity: 0, pkgY: 0 },

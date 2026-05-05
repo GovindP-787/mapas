@@ -23,6 +23,10 @@ type PublicOperator = {
   email: string
 }
 
+function getClearanceCode(): string {
+  return process.env.OPERATOR_CLEARANCE_CODE ?? process.env.ADMIN_PASSWORD ?? "mapas2024"
+}
+
 async function ensureStore(): Promise<void> {
   await mkdir(DATA_DIR, { recursive: true })
   try {
@@ -54,7 +58,7 @@ export async function registerOperator(params: {
   password: string
   clearanceCode: string
 }): Promise<PublicOperator> {
-  const clearance = process.env.OPERATOR_CLEARANCE_CODE ?? process.env.ADMIN_PASSWORD ?? "mapas2024"
+  const clearance = getClearanceCode()
   if (params.clearanceCode !== clearance) {
     throw new Error("INVALID_CLEARANCE")
   }
@@ -109,5 +113,41 @@ export async function verifyOperator(email: string, password: string): Promise<P
     id: operator.id,
     name: operator.name,
     email: operator.email,
+  }
+}
+
+export async function recoverOperatorPassword(params: {
+  email: string
+  newPassword: string
+  clearanceCode: string
+}): Promise<PublicOperator> {
+  const clearance = getClearanceCode()
+  if (params.clearanceCode !== clearance) {
+    throw new Error("INVALID_CLEARANCE")
+  }
+
+  const email = params.email.trim().toLowerCase()
+  const operators = await readOperators()
+  const index = operators.findIndex((operator) => operator.email.toLowerCase() === email)
+
+  if (index < 0) {
+    throw new Error("ACCOUNT_NOT_FOUND")
+  }
+
+  const salt = randomBytes(16).toString("hex")
+  const passwordHash = await hashPassword(params.newPassword, salt)
+
+  operators[index] = {
+    ...operators[index],
+    passwordHash,
+    salt,
+  }
+
+  await writeOperators(operators)
+
+  return {
+    id: operators[index].id,
+    name: operators[index].name,
+    email: operators[index].email,
   }
 }

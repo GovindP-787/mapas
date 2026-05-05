@@ -7,6 +7,7 @@ import {
     Battery,
     Bell,
     LogOut,
+    Loader2,
 } from "lucide-react"
 import { useRouter } from "next/navigation"
 import { cn } from "@/lib/utils"
@@ -16,6 +17,7 @@ import { MobileSidebar } from "./Sidebar"
 
 export function TopBar() {
     const router = useRouter()
+    const [isLaunching, setIsLaunching] = React.useState(false)
 
     // Mock system status - in real app, this would come from context/store
     const systemStatus = "Online" // Online, Degraded, Offline
@@ -58,6 +60,33 @@ export function TopBar() {
                 </div>
 
                 {/* Action Buttons */}
+                <Button 
+                    variant="outline" 
+                    size="sm"
+                    disabled={isLaunching}
+                    className="border-sky-500/30 bg-sky-500/10 text-sky-400 hover:bg-sky-500/20 hover:text-sky-300 font-medium tracking-wide min-w-[130px]"
+                    onClick={async () => {
+                        setIsLaunching(true)
+                        try {
+                            await fetch("/api/system/launch-qgroundcontrol", { method: "POST" })
+                            // Add an artificial delay to show a loading state 
+                            // as QGroundControl can take a few seconds to start
+                            setTimeout(() => setIsLaunching(false), 4000)
+                        } catch {
+                            setIsLaunching(false)
+                        }
+                    }}
+                >
+                    {isLaunching ? (
+                        <>
+                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                            Launching...
+                        </>
+                    ) : (
+                        "Open Launcher"
+                    )}
+                </Button>
+
                 <Button variant="outline" size="icon" className="text-slate-400 border-slate-950 hover:bg-slate-950 hover:text-sky-400">
                     <Bell size={18} />
                 </Button>

@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState } from "react"
 import { Separator } from "@/components/ui/separator"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
@@ -8,7 +8,6 @@ import { Label } from "@/components/ui/label"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import {
-    Settings,
     Server,
     UserCheck,
     Mic,
@@ -25,53 +24,42 @@ import {
 } from "lucide-react"
 
 export default function SettingsPage() {
+    const readSetting = (key: string, fallback: string) => {
+        if (typeof window === "undefined") {
+            return fallback
+        }
+        return localStorage.getItem(key) ?? fallback
+    }
+
     // System & Connectivity
-    const [apiUrl, setApiUrl] = useState("http://localhost:8002")
-    const [autoReconnect, setAutoReconnect] = useState(true)
+    const [apiUrl, setApiUrl] = useState(() => readSetting("settings_apiUrl", "http://localhost:8002"))
+    const [autoReconnect, setAutoReconnect] = useState(() => readSetting("settings_autoReconnect", "true") === "true")
     const [connectionStatus, setConnectionStatus] = useState<"idle" | "testing" | "success" | "failed">("idle")
 
     // Face Verification
-    const [confidenceThreshold, setConfidenceThreshold] = useState(75)
-    const [maxEnrollPhotos, setMaxEnrollPhotos] = useState(5)
+    const [confidenceThreshold, setConfidenceThreshold] = useState(() => Number(readSetting("settings_confidenceThreshold", "75")))
+    const [maxEnrollPhotos, setMaxEnrollPhotos] = useState(() => Number(readSetting("settings_maxEnrollPhotos", "5")))
 
     // Audio / Announcements
-    const [ttsLanguage, setTtsLanguage] = useState("en")
-    const [audioVolume, setAudioVolume] = useState(80)
+    const [ttsLanguage, setTtsLanguage] = useState(() => readSetting("settings_ttsLanguage", "en"))
+    const [audioVolume, setAudioVolume] = useState(() => Number(readSetting("settings_audioVolume", "80")))
 
     // UI Preferences
-    const [refreshInterval, setRefreshInterval] = useState(5)
-    const [unitSystem, setUnitSystem] = useState<"metric" | "imperial">("metric")
+    const [refreshInterval, setRefreshInterval] = useState(() => Number(readSetting("settings_refreshInterval", "5")))
+    const [unitSystem, setUnitSystem] = useState<"metric" | "imperial">(() => readSetting("settings_unitSystem", "metric") as "metric" | "imperial")
 
     // ElevenLabs
-    const [elEngine, setElEngine] = useState<"pyttsx3" | "elevenlabs">("pyttsx3")
-    const [elApiKey, setElApiKey] = useState("")
-    const [elVoiceId, setElVoiceId] = useState("21m00Tcm4TlvDq8ikWAM")
-    const [elModelId, setElModelId] = useState("eleven_multilingual_v2")
-    const [elStability, setElStability] = useState(50)
-    const [elSimilarity, setElSimilarity] = useState(75)
+    const [elEngine, setElEngine] = useState<"pyttsx3" | "elevenlabs">(() => readSetting("settings_elEngine", "pyttsx3") as "pyttsx3" | "elevenlabs")
+    const [elApiKey, setElApiKey] = useState(() => readSetting("settings_elApiKey", ""))
+    const [elVoiceId, setElVoiceId] = useState(() => readSetting("settings_elVoiceId", "21m00Tcm4TlvDq8ikWAM"))
+    const [elModelId, setElModelId] = useState(() => readSetting("settings_elModelId", "eleven_multilingual_v2"))
+    const [elStability, setElStability] = useState(() => Number(readSetting("settings_elStability", "50")))
+    const [elSimilarity, setElSimilarity] = useState(() => Number(readSetting("settings_elSimilarity", "75")))
     const [showApiKey, setShowApiKey] = useState(false)
     const [elTestStatus, setElTestStatus] = useState<"idle" | "testing" | "success" | "failed">("idle")
+    const [elStatusMessage, setElStatusMessage] = useState("")
 
     const [saved, setSaved] = useState(false)
-
-    // Load persisted settings from localStorage on mount
-    useEffect(() => {
-        const ls = (key: string, fallback: string) => localStorage.getItem(key) ?? fallback
-        setApiUrl(ls("settings_apiUrl", "http://localhost:8002"))
-        setAutoReconnect(ls("settings_autoReconnect", "true") === "true")
-        setConfidenceThreshold(Number(ls("settings_confidenceThreshold", "75")))
-        setMaxEnrollPhotos(Number(ls("settings_maxEnrollPhotos", "5")))
-        setTtsLanguage(ls("settings_ttsLanguage", "en"))
-        setAudioVolume(Number(ls("settings_audioVolume", "80")))
-        setRefreshInterval(Number(ls("settings_refreshInterval", "5")))
-        setUnitSystem(ls("settings_unitSystem", "metric") as "metric" | "imperial")
-        setElEngine(ls("settings_elEngine", "pyttsx3") as "pyttsx3" | "elevenlabs")
-        setElApiKey(ls("settings_elApiKey", ""))
-        setElVoiceId(ls("settings_elVoiceId", "21m00Tcm4TlvDq8ikWAM"))
-        setElModelId(ls("settings_elModelId", "eleven_multilingual_v2"))
-        setElStability(Number(ls("settings_elStability", "50")))
-        setElSimilarity(Number(ls("settings_elSimilarity", "75")))
-    }, [])
 
     async function testConnection() {
         setConnectionStatus("testing")
@@ -103,7 +91,7 @@ export default function SettingsPage() {
 
         // Push ElevenLabs config to backend
         try {
-            await fetch(`${apiUrl}/settings/tts`, {
+            const res = await fetch(`${apiUrl}/settings/tts`, {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({
@@ -116,14 +104,22 @@ export default function SettingsPage() {
                     language: ttsLanguage,
                 }),
             })
+            const data = (await res.json()) as { status?: string; message?: string }
+            if (!res.ok || data.status === "error") {
+                setSaved(false)
+                setElStatusMessage(data.message ?? "Failed to save TTS settings on backend.")
+                return
+            }
         } catch { /* backend may not be running */ }
 
         setSaved(true)
+        setElStatusMessage("")
         setTimeout(() => setSaved(false), 2500)
     }
 
     async function testElevenLabs() {
         setElTestStatus("testing")
+        setElStatusMessage("")
         try {
             const res = await fetch(`${apiUrl}/settings/tts`, {
                 method: "POST",
@@ -139,13 +135,22 @@ export default function SettingsPage() {
             })
             if (res.ok) {
                 // Trigger a TTS test on the backend
-                await fetch(`${apiUrl}/tts-test`)
-                setElTestStatus("success")
+                const testRes = await fetch(`${apiUrl}/tts-test`)
+                const testData = (await testRes.json()) as { status?: string; message?: string }
+                if (testRes.ok && testData.status === "ok") {
+                    setElTestStatus("success")
+                    setElStatusMessage(testData.message ?? "Voice test started.")
+                } else {
+                    setElTestStatus("failed")
+                    setElStatusMessage(testData.message ?? "Voice test failed.")
+                }
             } else {
                 setElTestStatus("failed")
+                setElStatusMessage("Failed to push TTS settings to backend.")
             }
         } catch {
             setElTestStatus("failed")
+            setElStatusMessage("Could not connect to backend.")
         }
         setTimeout(() => setElTestStatus("idle"), 3000)
     }
@@ -165,6 +170,7 @@ export default function SettingsPage() {
         setElModelId("eleven_multilingual_v2")
         setElStability(50)
         setElSimilarity(75)
+        setElStatusMessage("")
     }
 
     return (
@@ -411,6 +417,18 @@ export default function SettingsPage() {
                                 <option value="VR6AewLTigWG4xSOukaG">Arnold (crisp, male)</option>
                                 <option value="IKne3meq5aSn9XLyUdCD">Charlie (casual, male)</option>
                             </select>
+                            <p className="text-xs text-slate-500">Pick a preset, or paste any custom ElevenLabs Voice ID below.</p>
+                        </div>
+
+                        <div className="space-y-2">
+                            <Label className="text-slate-300 text-sm">Custom Voice ID</Label>
+                            <Input
+                                value={elVoiceId}
+                                onChange={e => setElVoiceId(e.target.value.trim())}
+                                placeholder="e.g. 21m00Tcm4TlvDq8ikWAM"
+                                className="bg-slate-900 border-slate-800 text-slate-100 font-mono text-sm"
+                            />
+                            <p className="text-xs text-slate-500">Use this for cloned/custom voices from your ElevenLabs dashboard.</p>
                         </div>
 
                         {/* Model */}
@@ -456,7 +474,7 @@ export default function SettingsPage() {
                         <Button
                             variant="outline"
                             onClick={testElevenLabs}
-                            disabled={elTestStatus === "testing" || !elApiKey}
+                            disabled={elTestStatus === "testing" || (elEngine === "elevenlabs" && !elApiKey)}
                             className="border-slate-800 text-slate-300 hover:bg-slate-900"
                         >
                             {elTestStatus === "testing" ? (
@@ -469,6 +487,11 @@ export default function SettingsPage() {
                                 <span className="flex items-center gap-2"><FlaskConical size={14} /> Test Voice</span>
                             )}
                         </Button>
+                        {elStatusMessage && (
+                            <p className={`text-xs ${elTestStatus === "failed" ? "text-rose-400" : "text-slate-400"}`}>
+                                {elStatusMessage}
+                            </p>
+                        )}
 
                     </CardContent>
                 </Card>

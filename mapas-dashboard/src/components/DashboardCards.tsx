@@ -95,7 +95,7 @@ export function MissionOverviewCard() {
                         <div className="relative flex-shrink-0 flex items-center justify-center">
                             <div className="absolute inset-0 bg-cyan-500/8 rounded-full blur-2xl"></div>
                             <ChartContainer config={missionConfig} className="w-[116px] h-[116px]">
-                                <RadialBarChart cx="50%" cy="50%" innerRadius="70%" outerRadius="80%"
+                                <RadialBarChart cx="50%" cy="50%" innerRadius="70%" outerRadius="8 0%"
                                     startAngle={90} endAngle={-270} data={missionProgress}>
                                     <PolarAngleAxis type="number" domain={[0, 100]} tick={false} />
                                     <RadialBar dataKey="progress"
@@ -337,3 +337,4 @@ export function AIStatusCard() {
         </div>
     )
 }
+      

@@ -102,7 +102,7 @@ export function TelemetryPanel() {
                                 Live Telemetry
                             </CardTitle>
                             <CardDescription className="text-slate-500 text-[11px] mt-0.5">
-                                Altitude · Speed · Battery — last 20 samples
+                                
                             </CardDescription>
                         </div>
                         <span className="flex items-center gap-1.5 text-[10px] text-emerald-400 font-medium">
