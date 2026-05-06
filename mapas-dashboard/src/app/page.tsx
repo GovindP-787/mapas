@@ -459,7 +459,7 @@ export default function LandingPage() {
           </p>
           <div className="grid grid-cols-2 gap-3">
             {[
-              ["Real-time scanning"],
+              ["Real-time scanning", "30 fps continuous detection"],
               ["YOLO11 model", "Trained on disaster rescue data"],
               ["< 2s alert time", "From detect to emergency signal"],
               ["Night capable", "IR + thermal assisted vision"],
@@ -522,7 +522,7 @@ export default function LandingPage() {
         </div>
 
         <div className="relative z-10 mt-16 pt-8 border-t border-slate-900 text-xs text-slate-600 font-mono">
-          MAPAS · MOTHERSHIP AUTONOMOUS SYSTEM · {new Date().getFullYear()}
+          MAPAS · {new Date().getFullYear()}
         </div>
       </section>
 

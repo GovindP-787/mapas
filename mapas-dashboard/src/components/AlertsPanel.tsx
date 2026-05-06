@@ -118,36 +118,48 @@ export function AlertsPanel() {
     }
 
     return (
-        <div className="relative h-full">
-            <div className="absolute inset-0 bg-gradient-to-br from-amber-500/5 via-transparent to-transparent rounded-lg blur-3xl pointer-events-none"></div>
-            <Card className="bg-gradient-to-br from-slate-950 via-slate-950 to-slate-950 border-slate-950/50 text-slate-100 h-full flex flex-col relative z-10 hover:border-slate-900/50 transition-all duration-300">
-                <CardHeader className="pb-2">
-                    <div className="flex items-start justify-between gap-2">
-                        <div>
-                            <CardTitle className="text-sm font-medium text-slate-300">
-                                Operation Logs
-                            </CardTitle>
-                            <CardDescription className="text-slate-500 text-[11px] mt-0.5">
-                                {logs.length} event{logs.length !== 1 ? "s" : ""} captured
-                                {lastUpdated && isClient && (
-                                    <span className="ml-2 text-slate-600">· {lastUpdated.toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit", second: "2-digit" })}</span>
-                                )}
-                            </CardDescription>
+        <div className="relative h-full group/alerts flex flex-col">
+            {/* Ambient Edge Glow */}
+            <div className="absolute -inset-1 bg-gradient-to-br from-amber-500/10 via-red-500/5 to-transparent rounded-3xl blur-2xl opacity-50 group-hover/alerts:opacity-100 transition-opacity duration-700 pointer-events-none"></div>
+
+            <Card className="flex-1 bg-slate-950/60 backdrop-blur-2xl border border-white/[0.08] shadow-2xl shadow-black/50 text-slate-100 flex flex-col relative z-10 hover:border-white/[0.12] transition-all duration-500 rounded-2xl overflow-hidden min-h-0">
+                {/* Subtle highlight overlay */}
+                <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-amber-500/30 to-transparent"></div>
+
+                <CardHeader className="pb-4 pt-6 px-6 shrink-0 relative z-20">
+                    <div className="flex items-start justify-between gap-4">
+                        <div className="flex items-center gap-3">
+                            <div className="flex items-center justify-center w-10 h-10 rounded-xl bg-gradient-to-b from-slate-800 to-slate-900 border border-white/10 shadow-inner">
+                                <AlertTriangle className="h-5 w-5 text-amber-400 drop-shadow-[0_0_8px_rgba(251,191,36,0.5)]" />
+                            </div>
+                            <div>
+                                <CardTitle className="text-[15px] font-bold text-white tracking-tight">
+                                    Alerts & Logs
+                                </CardTitle>
+                                <CardDescription className="text-[11px] text-slate-400 tracking-wide font-medium mt-0.5">
+                                    {logs.length} event{logs.length !== 1 ? "s" : ""} captured
+                                    {lastUpdated && isClient && (
+                                        <span className="ml-1.5 text-slate-500">· {lastUpdated.toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit", second: "2-digit" })}</span>
+                                    )}
+                                </CardDescription>
+                            </div>
                         </div>
-                        <div className="flex items-center gap-2 flex-shrink-0">
-                            <button
-                                onClick={loadLogs}
-                                disabled={isLoading}
-                                className="p-1.5 rounded-lg bg-slate-950/50 border border-slate-950/40 text-slate-500 hover:text-slate-300 hover:bg-slate-950/50 transition-all duration-200 disabled:opacity-40"
-                            >
-                                <RefreshCw size={12} className={isLoading ? "animate-spin" : ""} />
-                            </button>
-                        {/* Mini distribution chart */}
-                        <ChartContainer config={logDistConfig} className="w-[72px] h-[36px] flex-shrink-0">
-                            <BarChart data={distribution} margin={{ top: 0, right: 0, left: 0, bottom: 0 }} barSize={14}>
-                                <XAxis dataKey="name" hide />
-                                <ChartTooltip content={<ChartTooltipContent hideLabel />} />
-                                <Bar dataKey="count" radius={[3, 3, 0, 0]}>
+                        <div className="flex flex-col items-end gap-2 flex-shrink-0">
+                            <div className="flex items-center gap-2">
+                                <button
+                                    onClick={loadLogs}
+                                    disabled={isLoading}
+                                    className="p-2 rounded-lg bg-black/40 border border-white/[0.05] text-slate-400 hover:text-white hover:bg-white/[0.05] hover:border-white/[0.1] transition-all duration-200 shadow-inner disabled:opacity-40"
+                                >
+                                    <RefreshCw size={14} className={isLoading ? "animate-spin text-cyan-400" : ""} />
+                                </button>
+                                {/* Mini distribution chart inside bento box */}
+                                <div className="p-1 rounded-lg bg-black/40 border border-white/[0.05] flex items-center justify-center shadow-inner h-[34px]">
+                                    <ChartContainer config={logDistConfig} className="w-[60px] h-full flex-shrink-0">
+                                        <BarChart data={distribution} margin={{ top: 2, right: 2, left: 2, bottom: 0 }} barSize={12}>
+                                            <XAxis dataKey="name" hide />
+                                            <ChartTooltip content={<ChartTooltipContent hideLabel />} cursor={{ fill: "rgba(255,255,255,0.03)" }} />
+                                            <Bar dataKey="count" radius={[4, 4, 1, 1]}>
                                     {distribution.map((d) => (
                                         <Cell key={d.key} fill={distColors[d.key]} fillOpacity={0.8} />
                                     ))}
@@ -156,23 +168,25 @@ export function AlertsPanel() {
                         </ChartContainer>
                         </div>
                     </div>
+                    </div>
+                    </div>
                 </CardHeader>
 
                 {/* Tab Navigation */}
-                <div className="px-4 pb-3">
-                    <div className="flex items-center gap-1 p-1 rounded-xl bg-slate-950/50 border border-slate-950/40">
+                <div className="px-6 pb-4">
+                    <div className="flex items-center gap-1.5 p-1.5 rounded-xl bg-white/[0.02] border border-white/[0.05] shadow-inner overflow-x-auto hide-scrollbar">
                         {OPERATION_TYPES.map((op) => (
                             <button
                                 key={op.value}
                                 onClick={() => setSelectedOperation(op.value)}
                                 className={cn(
-                                    "flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-[11px] font-medium whitespace-nowrap transition-all duration-200 flex-1 justify-center",
+                                    "flex flex-col items-center gap-1.5 px-3 py-2 rounded-lg text-[10px] font-bold uppercase tracking-wider whitespace-nowrap transition-all duration-300 flex-1 min-w-16",
                                     selectedOperation === op.value
-                                        ? "bg-slate-950 text-slate-100 shadow-sm"
-                                        : "text-slate-500 hover:text-slate-300 hover:bg-slate-950/40"
+                                        ? "bg-slate-800 text-white shadow-md border border-white/10"
+                                        : "text-slate-500 hover:text-slate-300 hover:bg-white/[0.03]"
                                 )}
                             >
-                                <span className={selectedOperation === op.value ? "text-slate-200" : op.color}>
+                                <span className={cn("transition-colors", selectedOperation === op.value ? op.color : "text-slate-500")}>
                                     {op.icon}
                                 </span>
                                 {op.label}
@@ -182,37 +196,39 @@ export function AlertsPanel() {
                 </div>
 
                 {/* Log level legend pills */}
-                <div className="px-4 pb-2 flex items-center gap-3">
+                <div className="px-6 pb-3 flex items-center justify-center gap-5">
                     {[
-                        { key: "info", label: "Info", dot: "bg-blue-400" },
-                        { key: "warning", label: "Warn", dot: "bg-amber-400" },
-                        { key: "critical", label: "Crit", dot: "bg-red-400" },
+                        { key: "info", label: "Info", dot: "bg-blue-400", glow: "shadow-[0_0_8px_rgba(96,165,250,0.5)]" },
+                        { key: "warning", label: "Warning", dot: "bg-amber-400", glow: "shadow-[0_0_8px_rgba(251,191,36,0.5)]" },
+                        { key: "critical", label: "Critical", dot: "bg-red-400", glow: "shadow-[0_0_8px_rgba(248,113,113,0.5)]" },
                     ].map((l) => (
-                        <span key={l.key} className="flex items-center gap-1 text-[10px] text-slate-500">
-                            <span className={cn("w-1.5 h-1.5 rounded-full", l.dot)}></span>
-                            {l.label} ({distribution.find(d => d.key === l.key)?.count ?? 0})
+                        <span key={l.key} className="flex items-center gap-1.5 text-[10px] uppercase font-bold tracking-wider text-slate-400">
+                            <span className={cn("w-2 h-2 rounded-full", l.dot, l.glow)}></span>
+                            {l.label} <span className="font-mono text-slate-500 bg-white/[0.03] px-1.5 py-0.5 rounded border border-white/[0.05]">{distribution.find(d => d.key === l.key)?.count ?? 0}</span>
                         </span>
                     ))}
                 </div>
 
                 {/* Logs Content */}
-                <CardContent className="flex-1 p-0 min-h-0">
+                <CardContent className="p-0">
                     {isLoading ? (
-                        <div className="flex items-center justify-center h-full">
-                            <span className="relative flex h-3 w-3 mr-2">
-                                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-slate-400 opacity-50"></span>
-                                <span className="relative inline-flex rounded-full h-3 w-3 bg-slate-500"></span>
+                        <div className="flex border-t border-white/[0.05] items-center justify-center h-[350px]">
+                            <span className="relative flex h-3 w-3 mr-3">
+                                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-cyan-400 opacity-50"></span>
+                                <span className="relative inline-flex rounded-full h-3 w-3 bg-cyan-500"></span>
                             </span>
-                            <span className="text-slate-400 text-sm">Loading...</span>
+                            <span className="text-cyan-400/80 font-mono text-sm tracking-widest font-bold">LOADING_LOGS</span>
                         </div>
                     ) : logs.length === 0 ? (
-                        <div className="flex flex-col items-center justify-center h-full gap-2">
-                            <Info size={20} className="text-slate-600" />
-                            <span className="text-slate-500 text-sm">No logs available</span>
+                        <div className="flex border-t border-white/[0.05] flex-col items-center justify-center h-[350px] gap-3">
+                            <div className="p-3 rounded-2xl bg-white/[0.02] border border-white/[0.05]">
+                                <Info size={24} className="text-slate-500" />
+                            </div>
+                            <span className="text-slate-500 font-mono text-sm tracking-widest uppercase">No logs available</span>
                         </div>
                     ) : (
-                        <ScrollArea className="h-[320px] w-full px-4 pb-4">
-                            <div className="space-y-1.5">
+                        <ScrollArea className="h-[350px] w-full border-t border-white/[0.05] bg-black/20">
+                            <div className="space-y-[1px] p-2">
                                 {logs.map((log) => {
                                     const timestamp = isClient
                                         ? new Date(log.timestamp).toLocaleTimeString("en-US", {
@@ -226,21 +242,36 @@ export function AlertsPanel() {
                                         <div
                                             key={log._id || `${log.timestamp}-${log.message}`}
                                             className={cn(
-                                                "flex items-start gap-2.5 text-sm px-3 py-2.5 rounded-xl border transition-all duration-200 hover:brightness-110",
-                                                getLevelStyles(log.level)
+                                                "group/log flex items-start gap-4 text-sm px-4 py-3 transition-all duration-200 border border-transparent rounded-lg",
+                                                log.level === 'critical' ? "bg-red-500/5 hover:bg-red-500/10 hover:border-red-500/20" : 
+                                                log.level === 'warning' ? "bg-amber-500/5 hover:bg-amber-500/10 hover:border-amber-500/20" :
+                                                "hover:bg-white/[0.03] hover:border-white/[0.05]"
                                             )}
                                         >
-                                            <div className="mt-0.5 flex-shrink-0">
+                                            <div className={cn(
+                                                "mt-0.5 flex-shrink-0 p-1.5 rounded-lg bg-black/40 border shadow-inner",
+                                                log.level === 'critical' ? "border-red-500/30" : 
+                                                log.level === 'warning' ? "border-amber-500/30" :
+                                                "border-blue-500/30"
+                                            )}>
                                                 {getLevelIcon(log.level)}
                                             </div>
-                                            <div className="flex-1 min-w-0">
-                                                <div className="flex items-center gap-2 mb-0.5">
-                                                    <Badge className={cn("text-[9px] px-1.5 py-0 border bg-slate-900/60 text-slate-300 border-slate-600/30 font-mono uppercase tracking-wide", getOperationColor(log.operation_type))}>
+                                            <div className="flex-1 min-w-0 pt-0.5">
+                                                <div className="flex items-center gap-2 mb-1.5">
+                                                    <Badge variant="outline" className={cn("text-[9px] px-2 py-0 border bg-black/40 font-mono uppercase tracking-widest shadow-inner", 
+                                                        log.level === 'critical' ? "border-red-500/20 text-red-400" : 
+                                                        log.level === 'warning' ? "border-amber-500/20 text-amber-400" :
+                                                        "border-slate-700/50 text-slate-300"
+                                                    )}>
                                                         {log.operation_type.replace("_", " ")}
                                                     </Badge>
-                                                    <span className="text-[10px] text-slate-500 font-mono ml-auto">{timestamp}</span>
+                                                    <span className="text-[10px] text-slate-500 font-mono tracking-widest ml-auto group-hover/log:text-slate-300 transition-colors drop-shadow-md">{timestamp}</span>
                                                 </div>
-                                                <p className="text-xs break-words leading-relaxed">{log.message}</p>
+                                                <p className={cn("text-xs font-medium leading-relaxed drop-shadow-md",
+                                                    log.level === 'critical' ? "text-red-100" : 
+                                                    log.level === 'warning' ? "text-amber-100" :
+                                                    "text-slate-300"
+                                                )}>{log.message}</p>
                                             </div>
                                         </div>
                                     )

@@ -4,37 +4,35 @@ import { OperationCard } from "@/components/OperationCard"
 import { Separator } from "@/components/ui/separator"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-import { Mic, LifeBuoy, Utensils, CheckCircle2, AlertTriangle, XCircle } from "lucide-react"
+import { Mic, Leaf, Utensils, CheckCircle2, AlertTriangle, XCircle } from "lucide-react"
 
 export default function PayloadOperationsPage() {
     const operations = [
         {
-            id: "OP-FD-001",
             name: "Food Delivery",
-            droneId: "DR-ALPHA-01",
-            status: "ready" as const,
+            droneId: "MAS",
+            status: "ready" as "ready" | "standby" | "unavailable",
             safetyCheck: true,
             icon: Utensils,
             slug: "food-delivery",
             href: "/dashboard/face-verification"
         },
         {
-            id: "OP-PAS-003",
             name: "Public Announcement System",
-            droneId: "DR-BETA-04",
-            status: "standby" as const,
+            droneId: "MAS",
+            status: "ready" as "ready" | "standby" | "unavailable",
             safetyCheck: true,
             icon: Mic,
             slug: "public-announcement"
         },
         {
-            id: "OP-LB-009",
-            name: "Lifebuoy Deployment",
-            droneId: "DR-GAMMA-02",
-            status: "unavailable" as const,
-            safetyCheck: false,
-            icon: LifeBuoy,
-            slug: "lifebuoy-deployment"
+            name: "Agriculture Spray",
+            droneId: "MAS",
+            status: "ready" as "ready" | "standby" | "unavailable",
+            safetyCheck: true,
+            icon: Leaf,
+            slug: "agriculture-spray",
+            hideButton: true
         }
     ]
 
@@ -106,7 +104,7 @@ export default function PayloadOperationsPage() {
 
                 <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
                     {operations.map((op) => (
-                        <OperationCard key={op.id} operation={op} />
+                        <OperationCard key={op.slug} operation={op} />
                     ))}
                 </div>
             </div>

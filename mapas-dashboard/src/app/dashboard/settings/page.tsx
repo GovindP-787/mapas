@@ -131,6 +131,7 @@ export default function SettingsPage() {
                     model_id: elModelId,
                     stability: elStability / 100,
                     similarity_boost: elSimilarity / 100,
+                    language: ttsLanguage,
                 }),
             })
             if (res.ok) {

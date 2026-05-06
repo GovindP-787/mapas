@@ -22,11 +22,11 @@ export default function Home() {
       </div>
 
       {/* Bottom Row: Telemetry & Alerts */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 flex-1 min-h-0 relative z-10">
-        <div className="col-span-1 lg:col-span-2 h-full">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 flex-1 min-h-0 relative z-10 pb-6">
+        <div className="col-span-1 lg:col-span-2">
           <TelemetryPanel />
         </div>
-        <div className="col-span-1 h-full">
+        <div className="col-span-1">
           <AlertsPanel />
         </div>
       </div>

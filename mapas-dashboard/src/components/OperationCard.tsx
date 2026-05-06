@@ -9,7 +9,7 @@ import Link from "next/link"
 
 interface OperationCardProps {
     operation: {
-        id: string
+        id?: string
         name: string
         droneId: string
         status: "ready" | "standby" | "unavailable"
@@ -17,6 +17,7 @@ interface OperationCardProps {
         icon: any
         slug?: string
         href?: string
+        hideButton?: boolean
     }
 }
 
@@ -42,7 +43,7 @@ export function OperationCard({ operation }: OperationCardProps) {
     const config = statusConfig[operation.status]
     const StatusIcon = config.icon
     
-    const operationPageUrl = operation.href ?? `/dashboard/payload/${operation.slug || operation.id.toLowerCase()}`
+    const operationPageUrl = operation.href ?? `/dashboard/payload/${operation.slug || ""}`
 
     return (
         <Card className="bg-slate-950 border-slate-950 hover:border-slate-900 transition-colors cursor-pointer group">
@@ -54,7 +55,9 @@ export function OperationCard({ operation }: OperationCardProps) {
                         </div>
                         <CardTitle className="text-base font-bold text-slate-200">{operation.name}</CardTitle>
                     </div>
-                    <p className="text-xs font-mono text-slate-500 ml-11">{operation.id}</p>
+                    {operation.id && (
+                        <p className="text-xs font-mono text-slate-500 ml-11">{operation.id}</p>
+                    )}
                 </div>
             </CardHeader>
             
@@ -84,14 +87,16 @@ export function OperationCard({ operation }: OperationCardProps) {
                 </div>
             </CardContent>
             
-            <CardFooter className="border-t border-slate-950 pt-3">
-                <Link href={operationPageUrl} className="w-full">
-                    <Button className="w-full bg-slate-950 hover:bg-sky-900 text-slate-200 border border-slate-900 hover:border-sky-600 transition-colors group/btn">
-                        View Details
-                        <ArrowRight size={14} className="ml-2" />
-                    </Button>
-                </Link>
-            </CardFooter>
+            {!operation.hideButton && (
+                <CardFooter className="border-t border-slate-950 pt-3">
+                    <Link href={operationPageUrl} className="w-full">
+                        <Button className="w-full bg-slate-950 hover:bg-sky-900 text-slate-200 border border-slate-900 hover:border-sky-600 transition-colors group/btn">
+                            View Details
+                            <ArrowRight size={14} className="ml-2" />
+                        </Button>
+                    </Link>
+                </CardFooter>
+            )}
         </Card>
     )
 }

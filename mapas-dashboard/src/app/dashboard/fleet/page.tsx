@@ -4,7 +4,6 @@ import { Separator } from "@/components/ui/separator"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import {
-    Plane,
     Utensils,
     Megaphone,
     Battery,
@@ -13,7 +12,6 @@ import {
     Thermometer,
     Weight,
     Ruler,
-    Clock,
     Radio,
     ShieldCheck,
     Cpu,
@@ -26,7 +24,6 @@ import {
 
 const drones = [
     {
-        id: "DR-ALPHA-01",
         name: "MAS",
         fullName: "Mothership Autonomous System",
         role: "Heavy-Lift · Command & Carrier",
@@ -37,9 +34,9 @@ const drones = [
         badgeClass: "bg-emerald-500/10 text-emerald-400 border-emerald-500/20",
         dotClass: "bg-emerald-500",
         description:
-            "MAS (Mothership Autonomous System) is the heavy-lift primary drone that acts as the command centre and carrier for the entire MAPAS operation. Powered by the NVIDIA Jetson Nano Orin, it handles high-level AI tasks on-board — including Face Recognition for verified delivery, Drowning Detection, and Public Announcements via its onboard PA system. MAS transports the smaller FPV drone (PAS) to the mission site to preserve PAS's battery, then autonomously coordinates the overall mission while PAS is deployed. It also handles high-volume tasks such as agriculture spraying thanks to its high-payload capacity.",
+            "MAS (Mothership Autonomous System) is the heavy-lift primary drone that acts as the command centre and carrier for the entire MAPAS operation. Powered by the NVIDIA Jetson Nano Orin, it handles high-level AI tasks on-board — including Face Recognition for verified delivery and Public Announcements via its onboard PA system. MAS transports the smaller FPV drone (PAS) to the mission site to preserve PAS's battery, then autonomously coordinates the overall mission while PAS is deployed. It also handles high-volume tasks such as agriculture spraying thanks to its high-payload capacity.",
         specs: [
-            { icon: Weight,       label: "Max Payload",      value: "2.5 kg" },
+            { icon: Weight,       label: "Max Payload",      value: "10 kg" },
             { icon: Ruler,        label: "Wingspan",         value: "680 mm" },
             { icon: Battery,      label: "Flight Time",      value: "~32 min" },
             { icon: Zap,          label: "Max Speed",        value: "65 km/h" },
@@ -56,13 +53,8 @@ const drones = [
             { icon: Radio,       label: "Data Link",            value: "915 MHz + Wi-Fi 6" },
             { icon: ShieldCheck, label: "Safety",              value: "Geo-fence · Kill-switch" },
         ],
-        missions: ["OP-FD-001", "OP-PAS-003"],
-        firmwareVersion: "MAS-FW v3.2.1",
-        lastMaintenance: "2026-02-18",
-        totalFlightHours: "214 h",
     },
     {
-        id: "DR-BETA-04",
         name: "PAS",
         fullName: "Piloted Aircraft System (FPV Drone)",
         role: "Scout · Rapid Response · Life-Finder",
@@ -92,10 +84,6 @@ const drones = [
             { icon: Battery,     label: "Power",                value: "6S LiPo · preserved while docked" },
             { icon: ShieldCheck, label: "Fail-safe",            value: "Auto-disarm · pilot override" },
         ],
-        missions: ["OP-SCOUT-001", "OP-SAR-002"],
-        firmwareVersion: "PAS-FW v2.8.0",
-        lastMaintenance: "2026-02-25",
-        totalFlightHours: "138 h",
     },
 ]
 
@@ -138,7 +126,7 @@ export default function DroneFleetPage() {
             {/* Drone cards */}
             <div className="space-y-10">
                 {drones.map((drone) => (
-                    <section key={drone.id} className="space-y-6">
+                    <section key={drone.name} className="space-y-6">
                         {/* --- Drone header --- */}
                         <div className="flex flex-col sm:flex-row sm:items-center gap-4">
                             <div className={`p-3 rounded-xl bg-slate-900 border border-slate-800 text-${drone.accentColor}-400`}>
@@ -154,8 +142,6 @@ export default function DroneFleetPage() {
                                     </Badge>
                                 </div>
                                 <div className="flex flex-wrap gap-2 mt-2">
-                                    <span className="text-xs font-mono text-slate-500 bg-slate-900 px-2 py-0.5 rounded border border-slate-800">{drone.id}</span>
-                                    <span className="text-xs text-slate-500 bg-slate-900 px-2 py-0.5 rounded border border-slate-800">{drone.firmwareVersion}</span>
                                     <span className="text-xs text-slate-500 bg-slate-900 px-2 py-0.5 rounded border border-slate-800">Role: {drone.role}</span>
                                 </div>
                             </div>
@@ -210,24 +196,6 @@ export default function DroneFleetPage() {
                                     ))}
                                 </CardContent>
                             </Card>
-                        </div>
-
-                        {/* Footer stats */}
-                        <div className="flex flex-wrap gap-4 text-xs text-slate-500">
-                            <span className="flex items-center gap-1.5">
-                                <Clock size={12} />
-                                Last maintenance: <span className="text-slate-300 font-medium">{drone.lastMaintenance}</span>
-                            </span>
-                            <span className="flex items-center gap-1.5">
-                                <Plane size={12} />
-                                Total flight hours: <span className="text-slate-300 font-medium">{drone.totalFlightHours}</span>
-                            </span>
-                            <span className="flex items-center gap-1.5">
-                                <Activity size={12} />
-                                Assigned missions: {drone.missions.map(m => (
-                                    <span key={m} className="font-mono text-sky-400 bg-slate-900 px-1.5 py-0.5 rounded border border-slate-800 ml-1">{m}</span>
-                                ))}
-                            </span>
                         </div>
 
                         {drone !== drones[drones.length - 1] && <Separator className="bg-slate-900" />}
